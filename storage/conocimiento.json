@@ -1,0 +1,63 @@
+{
+    "negocio": "BarberShop El Bigote de Oro",
+    "descripcion": "Nos encargamos de tener tu barba de la mejor manera",
+    "ubicacion": "EL verde",
+    "telefono": "3625149814",
+    "politicas": "Las citas se confirman por este mismo WhatsApp. Si no puedes asistir, avisanos con tiempo para reagendar.",
+    "instrucciones_extra": "Sugiere al cliente llegar 5 minutos antes de su cita. Si va a llegar tarde mas de 10 minutos, pidele que avise para ver si alcanza el espacio o conviene reagendar. Los sabados hay mucha demanda: recomienda agendar con anticipacion. Si el cliente quiere un corte o estilo especifico, dile que puede traer una foto de referencia.",
+    "intervalo_minutos": 30,
+    "horario_estructurado": {
+        "lunes": {
+            "abre": "10:00",
+            "cierra": "19:00"
+        },
+        "martes": {
+            "abre": "10:00",
+            "cierra": "19:00"
+        },
+        "miercoles": {
+            "abre": "10:00",
+            "cierra": "19:00"
+        },
+        "jueves": {
+            "abre": "10:00",
+            "cierra": "19:00"
+        },
+        "viernes": {
+            "abre": "10:00",
+            "cierra": "19:00"
+        },
+        "sabado": {
+            "abre": "10:00",
+            "cierra": "14:00"
+        },
+        "domingo": null
+    },
+    "servicios": [
+        {
+            "nombre": "Corte sencillo",
+            "precio": "200",
+            "duracion": 30
+        },
+        {
+            "nombre": "Corte de Diseño",
+            "precio": "600",
+            "duracion": 45
+        },
+        {
+            "nombre": "Arreglo de barba",
+            "precio": "800",
+            "duracion": 60
+        },
+        {
+            "nombre": "Arreglo de Bigote y Barba",
+            "precio": "700",
+            "duracion": 45
+        },
+        {
+            "nombre": "Servicio completo (Corte de cabello, Barba , Bigote y orejas )",
+            "precio": "2500",
+            "duracion": 60
+        }
+    ]
+}

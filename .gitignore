@@ -1,0 +1,8 @@
+.env
+/storage/conversaciones/*
+!/storage/conversaciones/.gitkeep
+/storage/citas.json
+/storage/correos.log
+/vendor/
+cloudflared.exe
+cloudflared.log

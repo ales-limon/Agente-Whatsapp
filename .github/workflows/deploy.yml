@@ -1,0 +1,87 @@
+name: Deploy agente-whatsapp to VPS
+
+# Push a main dispara el despliegue automatico a produccion.
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    env:
+      HOST: ${{ secrets.HOST }}
+      USERNAME: ${{ secrets.USERNAME }}
+      # >>> AJUSTA esta ruta a la de TU subdominio en el VPS (Hestia) <<<
+      TARGET_DIR: /home/systcliniq/web/agente.systcliniq.com/public_html
+
+    steps:
+      # 1. Traer el codigo
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. PHP solo para validar sintaxis (el agente no usa Composer)
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+
+      # 3. Validar sintaxis de todos los .php (aborta el deploy si hay error)
+      - name: Validate PHP syntax
+        run: |
+          echo "Validando sintaxis PHP..."
+          STATUS=0
+          for file in $(find . -name "*.php" -not -path "./vendor/*"); do
+            php -l "$file" > /dev/null 2>&1 || { echo "Error de sintaxis en $file"; STATUS=1; }
+          done
+          if [ $STATUS -eq 0 ]; then echo "Sintaxis OK"; else exit 1; fi
+
+      # 4. Preparar clave SSH
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
+
+      # 5. Subir archivos con rsync (excluye secretos y datos de runtime)
+      - name: Deploy with rsync
+        run: |
+          rsync -avz --delete \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='.claude/' \
+            --exclude='.env' \
+            --exclude='cloudflared.exe' \
+            --exclude='cloudflared.log' \
+            --exclude='storage/correos.log' \
+            --exclude='storage/citas.json' \
+            --exclude='storage/conocimiento.json' \
+            --exclude='storage/conversaciones/' \
+            -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
+            ./ "$USERNAME@$HOST:$TARGET_DIR/"
+
+      # 6. Permisos en el servidor
+      - name: Configure permissions
+        run: |
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no "$USERNAME@$HOST" "\
+            cd $TARGET_DIR && \
+            mkdir -p storage/conversaciones && \
+            chmod -R 755 storage && \
+            find . -name '*.php' -type f -exec chmod 644 {} \; && \
+            (test -f .htaccess && chmod 644 .htaccess || true) && \
+            echo 'Permisos OK'"
+
+      # 7. Aplicar el esquema / columnas nuevas (idempotente)
+      - name: Apply DB schema
+        run: |
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no "$USERNAME@$HOST" "cd $TARGET_DIR && php instalar.php"
+
+      # 8. Limpiar la clave SSH
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/id_rsa
+
+      - name: Done
+        run: echo "Deploy completado en $TARGET_DIR"
