@@ -13,8 +13,8 @@ jobs:
     env:
       HOST: ${{ secrets.HOST }}
       USERNAME: ${{ secrets.USERNAME }}
-      # >>> AJUSTA esta ruta a la de TU subdominio en el VPS (Hestia) <<<
-      TARGET_DIR: /home/systcliniq/web/agente.systcliniq.com/public_html
+      # Ruta del subdominio en el VPS (Hestia, usuario forjiato)
+      TARGET_DIR: /home/forjiato/web/agente.forjiato.com/public_html
 
     steps:
       # 1. Traer el codigo
