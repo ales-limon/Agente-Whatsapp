@@ -8,6 +8,7 @@ require_once __DIR__ . '/src/auth.php';
 require_once __DIR__ . '/src/negocios.php';
 require_once __DIR__ . '/src/conocimiento.php';
 require_once __DIR__ . '/src/claude.php';
+require_once __DIR__ . '/src/layout.php';
 require_once __DIR__ . '/csrf.php';
 
 cargar_entorno();
@@ -59,43 +60,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $negocioNombre = htmlspecialchars($negocio['nombre'], ENT_QUOTES, 'UTF-8');
-$slugSafe      = htmlspecialchars($negocio['slug'], ENT_QUOTES, 'UTF-8');
 $tokenCsrf     = generar_token_csrf();
-?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Chat de prueba — <?= $negocioNombre ?></title>
-<link rel="stylesheet" href="assets/identidad.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-<style>
-  * { box-sizing: border-box; }
-  body { margin: 0; font-family: var(--fuente-cuerpo); color: var(--tinta);
-         background: #EAF1F2; height: 100vh; display: flex; flex-direction: column; }
-  .barra { background: var(--marca); color: #fff; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; }
-  .barra .info { display: flex; align-items: center; gap: 10px; }
-  .barra .avatar { width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,.14); display: inline-flex; align-items: center; justify-content: center; font-size: 16px; }
-  .barra .info strong { display: block; font-size: 15px; font-weight: 600; }
-  .barra .info span { font-size: 12px; opacity: .8; }
-  .barra .acc a, .barra .acc button { background: rgba(255,255,255,.14); color: #fff; border: 0;
-                  padding: 8px 12px; border-radius: var(--radio-sm); cursor: pointer; font-size: 13px; text-decoration: none; margin-left: 6px; font-family: inherit; }
-  .barra .acc a:hover, .barra .acc button:hover { background: rgba(255,255,255,.26); }
-  #mensajes { flex: 1; overflow-y: auto; padding: 18px; display: flex; flex-direction: column; gap: 8px; }
+
+$css = '
+  .chat-top { background: var(--marca); color: #fff; padding: 12px 18px; display: flex; align-items: center; justify-content: space-between; }
+  .chat-top .info { display: flex; align-items: center; gap: 10px; }
+  .chat-top .avatar { width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,.14); display: inline-flex; align-items: center; justify-content: center; font-size: 16px; }
+  .chat-top strong { display: block; font-size: 15px; font-weight: 600; }
+  .chat-top span { font-size: 12px; opacity: .8; }
+  .chat-top .reiniciar { background: rgba(255,255,255,.14); color: #fff; border: 0; padding: 8px 12px; border-radius: var(--radio-sm); cursor: pointer; font-size: 13px; font-family: inherit; }
+  .chat-top .reiniciar:hover { background: rgba(255,255,255,.26); }
+  #mensajes { flex: 1; overflow-y: auto; padding: 18px; display: flex; flex-direction: column; gap: 8px; background: #EAF1F2; }
   .burbuja { max-width: 78%; padding: 9px 13px; border-radius: 12px; font-size: 15px; line-height: 1.45; white-space: pre-wrap; word-wrap: break-word; }
   .cliente { align-self: flex-end; background: var(--badge-bg); color: var(--tinta); border-bottom-right-radius: 4px; }
   .asistente { align-self: flex-start; background: var(--superficie); border: 1px solid var(--borde); border-bottom-left-radius: 4px; }
-  #escribiendo { align-self: flex-start; color: var(--texto-2); font-size: 13px; padding: 4px 12px; display: none; }
-  footer { background: var(--superficie); border-top: 1px solid var(--borde); padding: 12px; display: flex; gap: 8px; }
+  #escribiendo { color: var(--texto-2); font-size: 13px; padding: 4px 18px; display: none; background: #EAF1F2; }
+  .chat-footer { background: var(--superficie); border-top: 1px solid var(--borde); padding: 12px; display: flex; gap: 8px; }
   #texto { flex: 1; border: 1.5px solid var(--borde); border-radius: 22px; padding: 11px 16px; font-size: 15px; outline: none; font-family: inherit; color: var(--tinta); }
   #texto:focus { border-color: var(--marca); }
-  #enviar { background: var(--accion); color: #fff; border: 0; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  #enviar { background: var(--accion); color: #fff; border: 0; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; font-size: 16px; flex-shrink: 0; }
   #enviar:disabled { opacity: .5; cursor: default; }
-</style>
-</head>
-<body>
-  <header class="barra">
+';
+layout_inicio('Probar chat', 'negocio', 'chat', ['negocio' => $negocio, 'plano' => true, 'css' => $css]);
+?>
+  <div class="chat-top">
     <div class="info">
       <span class="avatar"><i class="fas fa-comment-dots"></i></span>
       <div>
@@ -103,23 +91,18 @@ $tokenCsrf     = generar_token_csrf();
         <span>Asistente de WhatsApp (prueba)</span>
       </div>
     </div>
-    <div class="acc">
-      <a href="panel.php?t=<?= $slugSafe ?>">Citas</a>
-      <a href="configuracion.php?t=<?= $slugSafe ?>">Config</a>
-      <a href="logout.php">Salir</a>
-      <button id="reiniciar" type="button">Reiniciar</button>
-    </div>
-  </header>
+    <button id="reiniciar" class="reiniciar" type="button"><i class="fas fa-rotate-right"></i> Reiniciar</button>
+  </div>
 
   <div id="mensajes">
     <div class="burbuja asistente">Hola, soy el asistente de <?= $negocioNombre ?>. Preguntame por servicios, precios, horarios o agenda una cita.</div>
   </div>
   <div id="escribiendo">escribiendo...</div>
 
-  <footer>
+  <div class="chat-footer">
     <input id="texto" type="text" placeholder="Escribe un mensaje" autocomplete="off" autofocus>
     <button id="enviar" type="button" aria-label="Enviar"><i class="fas fa-paper-plane"></i></button>
-  </footer>
+  </div>
 
 <script>
   const cont = document.getElementById('mensajes');
@@ -167,5 +150,5 @@ $tokenCsrf     = generar_token_csrf();
     input.focus();
   });
 </script>
-</body>
-</html>
+<?php
+layout_fin();

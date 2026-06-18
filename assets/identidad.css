@@ -160,3 +160,60 @@ a:hover { text-decoration: underline; }
 .alerta--error { background: var(--error-bg); color: var(--error-texto); border-color: var(--error-borde); }
 .alerta--aviso { background: var(--aviso-bg); color: var(--aviso-texto); border-color: var(--aviso-borde); }
 .alerta--ok    { background: var(--ok-bg);    color: var(--ok-texto);    border-color: var(--ok-borde); }
+
+/* ============================================================
+   Layout de app: barra lateral (sidebar) + contenido
+   ============================================================ */
+body.app { display: flex; min-height: 100vh; }
+
+.sidebar { width: 244px; flex-shrink: 0; background: var(--marca); color: #fff; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
+.sidebar__marca { display: flex; align-items: center; gap: 10px; padding: 18px 16px 14px; }
+.sidebar__marca .marca__icono { background: rgba(255,255,255,.12); }
+.sidebar__marca .marca__nombre { color: #fff; font-size: 15px; }
+.sidebar__ctx { margin: 2px 14px 10px; padding: 9px 12px; background: rgba(255,255,255,.06); border-radius: 8px; }
+.sidebar__ctx small { display: block; color: #8FAEB7; font-size: 11px; }
+.sidebar__ctx strong { color: #fff; font-size: 14px; }
+.sidebar__nav { display: flex; flex-direction: column; padding: 6px 0; }
+.nav-item { display: flex; align-items: center; gap: 11px; padding: 10px 14px; margin: 2px 10px; border-radius: 8px; color: #B6CDD4; text-decoration: none; font-size: 14px; font-weight: 500; }
+.nav-item:hover { background: rgba(255,255,255,.08); color: #fff; text-decoration: none; }
+.nav-item.activo { background: rgba(20,184,102,.20); color: #fff; }
+.nav-item i { width: 18px; text-align: center; font-size: 15px; }
+.nav-item--volver { color: #8FAEB7; font-size: 13px; font-weight: 400; }
+.sidebar__pie { margin-top: auto; padding: 14px 18px; border-top: 1px solid rgba(255,255,255,.10); }
+.sidebar__user { font-size: 12px; color: #8FAEB7; margin-bottom: 6px; word-break: break-all; }
+.sidebar__pie a { color: #fff; font-size: 13px; text-decoration: none; }
+.sidebar__pie a:hover { text-decoration: underline; }
+
+.contenido { flex: 1; min-width: 0; padding: 30px 34px; max-width: 1000px; }
+.contenido--plano { padding: 0; display: flex; flex-direction: column; height: 100vh; max-width: none; }
+.contenido__h1 { font-size: 26px; margin: 0 0 22px; }
+
+@media (max-width: 860px) {
+  body.app { flex-direction: column; }
+  .sidebar { width: 100%; height: auto; position: static; }
+  .sidebar__nav { flex-direction: row; flex-wrap: wrap; padding: 4px 8px 8px; }
+  .nav-item { margin: 2px 4px; }
+  .sidebar__pie { display: flex; align-items: center; justify-content: space-between; margin-top: 0; }
+  .sidebar__user { margin: 0; }
+  .contenido { padding: 22px 18px; }
+  .contenido--plano { height: auto; }
+}
+
+/* ============================================================
+   Componentes de dashboard (reutilizables en todas las pantallas)
+   ============================================================ */
+h2.seccion-t { font-family: var(--fuente-titulo); font-size: 17px; font-weight: 700; margin: 28px 0 14px; }
+.tarjeta { background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); padding: 16px 18px; margin-bottom: 12px; }
+.panel { background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); padding: 18px 20px; }
+.panel h3 { font-family: var(--fuente-titulo); font-size: 15px; font-weight: 700; margin: 0 0 12px; }
+.panel input, .panel select { padding: 10px 12px; border: 1.5px solid var(--borde); border-radius: var(--radio); font-size: 14px; font-family: var(--fuente-cuerpo); color: var(--tinta); background: var(--superficie); margin: 0 6px 8px 0; }
+.vacio { background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); padding: 22px; text-align: center; color: var(--texto-2); margin-bottom: 12px; }
+.input-mini { padding: 7px 10px; border: 1.5px solid var(--borde); border-radius: var(--radio-sm); font-size: 13px; font-family: var(--fuente-cuerpo); color: var(--tinta); background: var(--superficie); }
+.btn-mini { padding: 7px 12px; border: 1.5px solid var(--borde); background: var(--superficie); color: var(--tinta); border-radius: var(--radio-sm); font-size: 13px; cursor: pointer; }
+.btn-mini:hover { background: #F4F8F9; }
+.tabla { width: 100%; border-collapse: collapse; background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); overflow: hidden; }
+.tabla th, .tabla td { text-align: left; padding: 11px 14px; font-size: 13px; border-bottom: 1px solid var(--borde); }
+.tabla th { background: #F4F8F9; color: var(--texto-2); font-weight: 600; font-size: 12px; }
+.tabla tr:last-child td { border-bottom: 0; }
+.pill { font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--badge-bg); color: var(--badge-texto); }
+.pill--violeta { background: #ECE9FB; color: #534AB7; }
