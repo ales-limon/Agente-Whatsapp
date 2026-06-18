@@ -12,6 +12,7 @@
 // $opts:     ['negocio' => array, 'css' => string, 'plano' => bool]
 
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/escalacion.php';
 
 function layout_inicio(string $titulo, string $contexto, string $activo, array $opts = []): void {
     $u     = usuario_actual();
@@ -33,6 +34,8 @@ function layout_inicio(string $titulo, string $contexto, string $activo, array $
             ['chat',   "chat.php?t=$slug",          'fa-comment-dots',   'Probar chat'],
         ];
     }
+    // Cuántos chats están esperando atención humana (para el contador en "Citas").
+    $badgeCitas = ($contexto === 'negocio' && $neg) ? count(contactos_escalados((int)$neg['id'])) : 0;
     ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -58,7 +61,7 @@ function layout_inicio(string $titulo, string $contexto, string $activo, array $
     <?php endif; ?>
     <nav class="sidebar__nav">
       <?php foreach ($items as [$clave, $href, $icono, $label]): ?>
-        <a class="nav-item <?= $activo === $clave ? 'activo' : '' ?>" href="<?= $href ?>"><i class="fas <?= $icono ?>"></i> <?= $esc($label) ?></a>
+        <a class="nav-item <?= $activo === $clave ? 'activo' : '' ?>" href="<?= $href ?>"><i class="fas <?= $icono ?>"></i> <?= $esc($label) ?><?php if ($clave === 'citas' && $badgeCitas > 0): ?><span class="nav-badge"><?= $badgeCitas ?></span><?php endif; ?></a>
       <?php endforeach; ?>
     </nav>
     <div class="sidebar__pie">

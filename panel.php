@@ -85,10 +85,35 @@ $css = '
   .conv .cnt { font-size: 12px; color: var(--texto-2); white-space: nowrap; }
   .conv .der { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; white-space: nowrap; }
   .conv .estado-humano { font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--aviso-bg); color: var(--aviso-texto); }
+  .atencion { background: var(--aviso-bg); border: 1px solid var(--aviso-borde); border-radius: var(--radio); padding: 14px 18px; margin-bottom: 24px; }
+  .atencion__t { font-family: var(--fuente-titulo); font-weight: 700; font-size: 15px; color: var(--aviso-texto); margin-bottom: 8px; }
+  .atencion__fila { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 9px 0; border-top: 1px solid var(--aviso-borde); }
+  .atencion__num { font-weight: 600; font-size: 14px; color: var(--aviso-texto); }
+  .atencion__motivo { font-size: 13px; color: var(--aviso-texto); opacity: .85; margin-top: 2px; }
 ';
 layout_inicio('Citas', 'negocio', 'citas', ['negocio' => $negocio, 'css' => $css]);
 ?>
   <h1 class="contenido__h1">Citas</h1>
+
+  <?php if ($escalados): ?>
+    <div class="atencion">
+      <div class="atencion__t"><i class="fas fa-circle-exclamation"></i> Necesitan atención (<?= count($escalados) ?>)</div>
+      <?php foreach ($escalados as $contacto => $e): ?>
+        <div class="atencion__fila">
+          <div>
+            <div class="atencion__num"><?= h($contacto) ?></div>
+            <?php if (!empty($e['motivo'])): ?><div class="atencion__motivo"><?= h($e['motivo']) ?></div><?php endif; ?>
+          </div>
+          <form method="post" style="margin:0;">
+            <?= campo_csrf() ?>
+            <input type="hidden" name="accion" value="reactivar_bot">
+            <input type="hidden" name="contacto" value="<?= h($contacto) ?>">
+            <button class="btn-mini" type="submit">Reactivar bot</button>
+          </form>
+        </div>
+      <?php endforeach; ?>
+    </div>
+  <?php endif; ?>
 
   <div class="tarjetas">
     <div class="stat"><div class="num"><?= count($citas) ?></div><div class="lbl">Citas totales</div></div>
