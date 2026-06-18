@@ -118,3 +118,14 @@ CREATE TABLE IF NOT EXISTS usuario_negocio (
   FOREIGN KEY (id_usuario) REFERENCES usuarios(id) ON DELETE CASCADE,
   FOREIGN KEY (id_negocio) REFERENCES negocios(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Escalación a humano: si existe fila para (negocio, contacto), el bot queda en
+-- pausa para ese chat (lo atiende una persona) hasta que se reactive en el panel.
+CREATE TABLE IF NOT EXISTS atencion_humana (
+  id_negocio INT NOT NULL,
+  contacto VARCHAR(80) NOT NULL,
+  motivo VARCHAR(255) NULL,
+  creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id_negocio, contacto),
+  FOREIGN KEY (id_negocio) REFERENCES negocios(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

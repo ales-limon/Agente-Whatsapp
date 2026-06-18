@@ -9,6 +9,7 @@ require_once __DIR__ . '/src/conversaciones.php';
 require_once __DIR__ . '/src/claude.php';
 require_once __DIR__ . '/src/twilio.php';
 require_once __DIR__ . '/src/uso.php';
+require_once __DIR__ . '/src/escalacion.php';
 
 cargar_entorno();
 ini_set('display_errors', '0');
@@ -49,6 +50,16 @@ function responder_whatsapp(string $texto): void {
     $escapada = htmlspecialchars($texto, ENT_XML1 | ENT_QUOTES, 'UTF-8');
     echo '<?xml version="1.0" encoding="UTF-8"?>';
     echo "<Response><Message>{$escapada}</Message></Response>";
+}
+
+// --- Atención humana: si este chat fue escalado, el bot NO responde (lo lleva una
+//     persona). Guardamos el mensaje entrante para que el dueño lo vea y no enviamos
+//     nada al cliente, hasta que se reactive el bot desde el panel. ---
+if (handoff_activo($idNegocio, $from)) {
+    guardar_mensaje($idNegocio, $from, 'user', $cuerpo);
+    header('Content-Type: text/xml; charset=utf-8');
+    echo '<?xml version="1.0" encoding="UTF-8"?><Response></Response>';
+    exit;
 }
 
 // --- Tope de uso del plan: si el negocio alcanzó su límite mensual, NO llamamos

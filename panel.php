@@ -5,6 +5,7 @@ require_once __DIR__ . '/src/entorno.php';
 require_once __DIR__ . '/src/auth.php';
 require_once __DIR__ . '/src/negocios.php';
 require_once __DIR__ . '/src/layout.php';
+require_once __DIR__ . '/src/escalacion.php';
 require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/csrf.php';
 cargar_entorno();
@@ -24,12 +25,16 @@ $pdo = conexion();
 // Cambiar estado de una cita (re-verificando que pertenece a este negocio)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     requiere_csrf();
-    $id     = (int)($_POST['id'] ?? 0);
     $accion = $_POST['accion'] ?? '';
-    $estado = $accion === 'confirmar' ? 'confirmada' : ($accion === 'cancelar' ? 'cancelada' : '');
-    if ($id && $estado) {
-        $st = $pdo->prepare("UPDATE citas SET estado = ? WHERE id = ? AND id_negocio = ?");
-        $st->execute([$estado, $id, $idNegocio]);
+    if ($accion === 'reactivar_bot') {
+        desactivar_handoff($idNegocio, trim((string)($_POST['contacto'] ?? '')));
+    } else {
+        $id     = (int)($_POST['id'] ?? 0);
+        $estado = $accion === 'confirmar' ? 'confirmada' : ($accion === 'cancelar' ? 'cancelada' : '');
+        if ($id && $estado) {
+            $st = $pdo->prepare("UPDATE citas SET estado = ? WHERE id = ? AND id_negocio = ?");
+            $st->execute([$estado, $id, $idNegocio]);
+        }
     }
     header('Location: panel.php?t=' . urlencode($negocio['slug']));
     exit;
@@ -52,6 +57,8 @@ foreach ($st as $row) {
     $u->execute([$row['ult']]);
     $conversaciones[] = ['contacto' => $row['contacto'], 'total' => (int)$row['total'], 'ultimo' => (string)$u->fetchColumn()];
 }
+
+$escalados = contactos_escalados($idNegocio);
 
 function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 function badge_estado(string $estado): string {
@@ -76,6 +83,8 @@ $css = '
   .conv .contacto { font-weight: 500; font-size: 14px; }
   .conv .prev { color: var(--texto-2); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 520px; }
   .conv .cnt { font-size: 12px; color: var(--texto-2); white-space: nowrap; }
+  .conv .der { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; white-space: nowrap; }
+  .conv .estado-humano { font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--aviso-bg); color: var(--aviso-texto); }
 ';
 layout_inicio('Citas', 'negocio', 'citas', ['negocio' => $negocio, 'css' => $css]);
 ?>
@@ -130,7 +139,19 @@ layout_inicio('Citas', 'negocio', 'citas', ['negocio' => $negocio, 'css' => $css
             <div class="contacto"><?= h($cv['contacto']) ?></div>
             <div class="prev"><?= h($cv['ultimo']) ?></div>
           </div>
-          <div class="cnt"><?= (int)$cv['total'] ?> mensajes</div>
+          <div class="der">
+            <?php if (isset($escalados[$cv['contacto']])): ?>
+              <span class="estado-humano">En atención humana</span>
+              <form method="post" style="margin:0;">
+                <?= campo_csrf() ?>
+                <input type="hidden" name="accion" value="reactivar_bot">
+                <input type="hidden" name="contacto" value="<?= h($cv['contacto']) ?>">
+                <button class="btn-mini" type="submit">Reactivar bot</button>
+              </form>
+            <?php else: ?>
+              <span class="cnt"><?= (int)$cv['total'] ?> mensajes</span>
+            <?php endif; ?>
+          </div>
         </div>
       <?php endforeach; ?>
     </div>

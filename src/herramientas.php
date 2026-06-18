@@ -5,6 +5,7 @@
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/conocimiento.php';
 require_once __DIR__ . '/notificaciones.php';
+require_once __DIR__ . '/escalacion.php';
 
 function herramientas_disponibles(): array {
     return [
@@ -46,6 +47,17 @@ function herramientas_disponibles(): array {
                 'required' => ['fecha'],
             ],
         ],
+        [
+            'name'        => 'escalar_a_humano',
+            'description' => 'Pasa la conversacion a una persona del negocio. Usala cuando el cliente pida explicitamente hablar con una persona/humano, o cuando no puedas resolver lo que necesita con la informacion y herramientas disponibles. Al llamarla, el negocio recibe un aviso y tu DEJAS de atender a este cliente hasta que una persona lo retome. Despues de llamarla, avisa al cliente con calidez que en breve lo contactara una persona del negocio.',
+            'input_schema' => [
+                'type'       => 'object',
+                'properties' => [
+                    'motivo' => ['type' => 'string', 'description' => 'Breve resumen de lo que necesita el cliente, para dar contexto a la persona del negocio'],
+                ],
+                'required' => [],
+            ],
+        ],
     ];
 }
 
@@ -54,6 +66,7 @@ function ejecutar_herramienta(string $nombre, array $input, ?string $contacto, i
         case 'registrar_cita':           return registrar_cita($input, $contacto, $idNegocio);
         case 'consultar_cita':           return consultar_cita($input, $contacto, $idNegocio);
         case 'consultar_disponibilidad': return consultar_disponibilidad($input, $contacto, $idNegocio);
+        case 'escalar_a_humano':         return escalar_a_humano($input, $contacto, $idNegocio);
         default:                         return 'Herramienta no reconocida.';
     }
 }
@@ -245,4 +258,17 @@ function consultar_disponibilidad(array $datos, ?string $contacto, int $idNegoci
         return 'El ' . $dia . ' ' . $fecha . ' no hay horarios libres' . ($servicio !== '' ? ' para ' . $servicio : '') . '. Ofrece al cliente otro dia.';
     }
     return 'Horarios LIBRES el ' . $dia . ' ' . $fecha . ($servicio !== '' ? ' para ' . $servicio . ' (' . $dur . ' min)' : '') . ': ' . implode(', ', $libres) . '. Ofrece estos horarios al cliente.';
+}
+
+function escalar_a_humano(array $datos, ?string $contacto, int $idNegocio): string {
+    $motivo  = trim((string)($datos['motivo'] ?? ''));
+    $persona = (string)($contacto ?? 'desconocido');
+    $c       = cargar_conocimiento($idNegocio);
+
+    activar_handoff($idNegocio, $persona, $motivo);   // pausa el bot para este chat
+    avisar_escalacion($c, $persona, $motivo);          // avisa al dueño por WhatsApp
+
+    return 'Escalado a una persona del negocio (el bot quedo en pausa para este chat). '
+         . 'Avisa al cliente con calidez que en breve lo contactara una persona del negocio. '
+         . 'No sigas ofreciendo ayudarlo tu automaticamente.';
 }

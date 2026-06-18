@@ -44,6 +44,23 @@ function enviar_whatsapp(string $para, string $mensaje, string $desde): array {
     return ['exito' => true];
 }
 
+// Avisa al dueño que un cliente pidió atención humana (escalación). $c = conocimiento.
+function avisar_escalacion(array $c, string $contacto, string $motivo = ''): void {
+    $para  = trim((string)($c['numero_avisos'] ?? ''));
+    $desde = trim((string)($c['numero_whatsapp'] ?? ''));
+    if ($para === '' || $desde === '') return;
+
+    $mensaje = "Atencion requerida en {$c['negocio']}:\n"
+             . "El cliente {$contacto} necesita hablar con una persona"
+             . ($motivo !== '' ? ".\nMotivo: {$motivo}" : '.') . "\n"
+             . "El asistente quedo en pausa para ese chat hasta que lo reactives en el panel (seccion Citas).";
+    try {
+        enviar_whatsapp($para, $mensaje, $desde);
+    } catch (Throwable $e) {
+        error_log('avisar_escalacion: ' . $e->getMessage());
+    }
+}
+
 // Avisa al dueño que se agendó una cita. $c es el conocimiento del negocio.
 function avisar_cita_agendada(array $c, array $cita): void {
     $para  = trim((string)($c['numero_avisos'] ?? ''));

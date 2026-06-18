@@ -93,8 +93,10 @@ function construir_system_prompt(array $c): string {
         $nombre = trim((string)($s['nombre'] ?? ''));
         if ($nombre === '') continue;
         $precio = trim((string)($s['precio'] ?? ''));
+        $dur    = (int)($s['duracion'] ?? 0);
         $linea  = "- {$nombre}";
         if ($precio !== '') $linea .= ": \${$precio}";
+        if ($dur > 0)       $linea .= " (duracion: {$dur} min)";
         $servicios .= $linea . "\n";
     }
     if ($servicios === '') $servicios = "(sin servicios cargados)\n";
