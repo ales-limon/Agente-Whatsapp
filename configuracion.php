@@ -20,6 +20,7 @@ if (!$negocio) {
 $idNegocio = (int)$negocio['id'];
 requiere_acceso_negocio($idNegocio);
 $mensaje   = '';
+$error     = '';
 
 $diasOrden = ['lunes' => 'Lunes', 'martes' => 'Martes', 'miercoles' => 'Miércoles', 'jueves' => 'Jueves', 'viernes' => 'Viernes', 'sabado' => 'Sábado', 'domingo' => 'Domingo'];
 
@@ -52,9 +53,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     guardar_configuracion($idNegocio, $datos);
+
+    // Dirección (slug) del chat web: editable, con validación de unicidad.
+    $nuevoSlug = trim($_POST['slug'] ?? '');
+    if ($nuevoSlug !== '' && slugify($nuevoSlug) !== $negocio['slug']) {
+        $rs = actualizar_slug($idNegocio, $nuevoSlug);
+        if ($rs['exito']) {
+            header('Location: configuracion.php?t=' . urlencode($rs['slug']) . '&guardado=1');
+            exit;
+        }
+        $error = $rs['mensaje']; // dirección en uso: lo demás sí se guardó
+    }
+
     $mensaje = 'Configuración guardada correctamente.';
     $negocio = negocio_por_id($idNegocio);
 }
+
+if (isset($_GET['guardado'])) $mensaje = 'Configuración guardada correctamente.';
 
 $c         = cargar_conocimiento($idNegocio);
 $servicios = $c['servicios'] ?? [];
@@ -92,6 +107,7 @@ layout_inicio('Configuración', 'negocio', 'config', ['negocio' => $negocio, 'cs
   <h1 class="contenido__h1">Configuración</h1>
 
   <?php if ($mensaje): ?><div class="alerta alerta--ok"><i class="fas fa-check-circle"></i><span><?= htmlspecialchars($mensaje) ?></span></div><?php endif; ?>
+  <?php if ($error): ?><div class="alerta alerta--error"><i class="fas fa-exclamation-triangle"></i><span><?= htmlspecialchars($error) ?></span></div><?php endif; ?>
 
   <form method="post" class="form-config">
     <?= campo_csrf() ?>
@@ -110,6 +126,11 @@ layout_inicio('Configuración', 'negocio', 'config', ['negocio' => $negocio, 'cs
         <label>Número para recibir avisos de citas (tu WhatsApp)</label>
         <input type="text" name="numero_avisos" value="<?= val($c, 'numero_avisos') ?>" placeholder="+5213334588268">
         <div class="hint">Cuando se agende una cita, te llega un aviso por WhatsApp aquí. Usa formato internacional, ej. +52...</div>
+      </div>
+      <div class="grupo">
+        <label>Dirección del chat web (enlace y QR)</label>
+        <input type="text" name="slug" value="<?= val($negocio, 'slug') ?>">
+        <div class="hint">Aparece en el enlace: …/chat-publico.php?t=<strong>esto</strong>. Si la cambias, los QR o enlaces que ya hayas compartido dejarán de funcionar.</div>
       </div>
     </div>
 

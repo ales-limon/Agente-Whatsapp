@@ -111,6 +111,18 @@ function fijar_limite_mensajes(int $id, int $limite): void {
     conexion()->prepare("UPDATE negocios SET limite_mensajes_mes = ? WHERE id = ?")->execute([$limite, $id]);
 }
 
+// Cambia la dirección (slug) de un negocio. Valida que no choque con otro.
+// OJO: cambia la URL del chat web; los QR/enlaces viejos dejan de servir.
+function actualizar_slug(int $id, string $slugDeseado): array {
+    $slug = slugify($slugDeseado);
+    if ($slug === '') return ['exito' => false, 'mensaje' => 'La dirección del chat no puede quedar vacía.'];
+    $st = conexion()->prepare("SELECT id FROM negocios WHERE slug = ? AND id <> ?");
+    $st->execute([$slug, $id]);
+    if ($st->fetch()) return ['exito' => false, 'mensaje' => 'Esa dirección ya está en uso por otro negocio. Elige otra.'];
+    conexion()->prepare("UPDATE negocios SET slug = ? WHERE id = ?")->execute([$slug, $id]);
+    return ['exito' => true, 'slug' => $slug];
+}
+
 // Asigna (o limpia) el numero de WhatsApp de un negocio. Lo gestiona el superadmin.
 function asignar_numero(int $id, string $numero): array {
     $numero = trim($numero);
