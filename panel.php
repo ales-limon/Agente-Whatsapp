@@ -77,7 +77,7 @@ $css = '
   .stat .num { font-family: var(--fuente-titulo); font-size: 28px; font-weight: 700; color: var(--tinta); }
   .stat .lbl { font-size: 13px; color: var(--texto-2); margin-top: 2px; }
   .acciones .btn { padding: 6px 12px; font-size: 12px; margin-right: 6px; }
-  .conv { background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); padding: 4px 0; margin-top: 24px; }
+  .conv { background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); padding: 4px 0; }
   .conv .fila { padding: 11px 16px; border-bottom: 1px solid var(--borde); display: flex; justify-content: space-between; gap: 16px; }
   .conv .fila:last-child { border-bottom: 0; }
   .conv .contacto { font-weight: 500; font-size: 14px; }
@@ -90,6 +90,12 @@ $css = '
   .atencion__fila { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 9px 0; border-top: 1px solid var(--aviso-borde); }
   .atencion__num { font-weight: 600; font-size: 14px; color: var(--aviso-texto); }
   .atencion__motivo { font-size: 13px; color: var(--aviso-texto); opacity: .85; margin-top: 2px; }
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--borde); margin: 26px 0 18px; flex-wrap: wrap; }
+  .tab { background: none; border: 0; border-bottom: 2px solid transparent; padding: 10px 14px; font-family: var(--fuente-cuerpo); font-size: 14px; font-weight: 500; color: var(--texto-2); cursor: pointer; }
+  .tab:hover { color: var(--tinta); }
+  .tab.activo { color: var(--marca); border-bottom-color: var(--accion); font-weight: 600; }
+  .tab-panel { display: none; }
+  .tab-panel.activo { display: block; }
 ';
 layout_inicio('Citas', 'negocio', 'citas', ['negocio' => $negocio, 'css' => $css]);
 ?>
@@ -121,65 +127,86 @@ layout_inicio('Citas', 'negocio', 'citas', ['negocio' => $negocio, 'css' => $css
     <div class="stat"><div class="num"><?= count($conversaciones) ?></div><div class="lbl">Conversaciones</div></div>
   </div>
 
-  <h2 class="seccion-t" style="margin-top:0;">Citas</h2>
-  <?php if (!$citas): ?>
-    <div class="vacio">Aun no hay citas. Cuando el asistente agende una, aparecera aqui.</div>
-  <?php else: ?>
-    <table class="tabla">
-      <thead>
-        <tr><th>Folio</th><th>Cliente</th><th>Servicio</th><th>Día</th><th>Hora</th><th>Contacto</th><th>Estado</th><th></th></tr>
-      </thead>
-      <tbody>
-      <?php foreach ($citas as $c): ?>
-        <tr>
-          <td>#<?= h($c['id']) ?></td>
-          <td><?= h($c['nombre']) ?></td>
-          <td><?= h($c['servicio']) ?></td>
-          <td><?= h($c['dia_texto']) ?></td>
-          <td><?= h($c['hora']) ?></td>
-          <td><?= h($c['contacto']) ?></td>
-          <td><?= badge_estado($c['estado']) ?></td>
-          <td class="acciones">
-            <?php if ($c['estado'] === 'pendiente'): ?>
-              <form method="post" style="display:inline;">
-                <?= campo_csrf() ?>
-                <input type="hidden" name="id" value="<?= h($c['id']) ?>">
-                <button class="btn btn--primario" name="accion" value="confirmar">Confirmar</button>
-                <button class="btn btn--secundario" name="accion" value="cancelar">Cancelar</button>
-              </form>
-            <?php endif; ?>
-          </td>
-        </tr>
-      <?php endforeach; ?>
-      </tbody>
-    </table>
-  <?php endif; ?>
+  <div class="tabs">
+    <button type="button" class="tab activo" data-tab="citas">Citas (<?= count($citas) ?>)</button>
+    <button type="button" class="tab" data-tab="conversaciones">Conversaciones (<?= count($conversaciones) ?>)</button>
+  </div>
 
-  <?php if ($conversaciones): ?>
-    <h2 class="seccion-t">Conversaciones recientes</h2>
-    <div class="conv">
-      <?php foreach ($conversaciones as $cv): ?>
-        <div class="fila">
-          <div>
-            <a class="contacto" style="text-decoration:none;" href="conversacion.php?t=<?= $slugSafe ?>&c=<?= urlencode($cv['contacto']) ?>"><?= h($cv['contacto']) ?></a>
-            <div class="prev"><?= h($cv['ultimo']) ?></div>
+  <div class="tab-panel activo" data-panel="citas">
+    <?php if (!$citas): ?>
+      <div class="vacio">Aun no hay citas. Cuando el asistente agende una, aparecera aqui.</div>
+    <?php else: ?>
+      <table class="tabla">
+        <thead>
+          <tr><th>Folio</th><th>Cliente</th><th>Servicio</th><th>Día</th><th>Hora</th><th>Contacto</th><th>Estado</th><th></th></tr>
+        </thead>
+        <tbody>
+        <?php foreach ($citas as $c): ?>
+          <tr>
+            <td>#<?= h($c['id']) ?></td>
+            <td><?= h($c['nombre']) ?></td>
+            <td><?= h($c['servicio']) ?></td>
+            <td><?= h($c['dia_texto']) ?></td>
+            <td><?= h($c['hora']) ?></td>
+            <td><?= h($c['contacto']) ?></td>
+            <td><?= badge_estado($c['estado']) ?></td>
+            <td class="acciones">
+              <?php if ($c['estado'] === 'pendiente'): ?>
+                <form method="post" style="display:inline;">
+                  <?= campo_csrf() ?>
+                  <input type="hidden" name="id" value="<?= h($c['id']) ?>">
+                  <button class="btn btn--primario" name="accion" value="confirmar">Confirmar</button>
+                  <button class="btn btn--secundario" name="accion" value="cancelar">Cancelar</button>
+                </form>
+              <?php endif; ?>
+            </td>
+          </tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table>
+    <?php endif; ?>
+  </div>
+
+  <div class="tab-panel" data-panel="conversaciones">
+    <?php if (!$conversaciones): ?>
+      <div class="vacio">Aún no hay conversaciones. Cuando un cliente escriba, aparecerá aquí.</div>
+    <?php else: ?>
+      <div class="conv">
+        <?php foreach ($conversaciones as $cv): ?>
+          <div class="fila">
+            <div>
+              <a class="contacto" style="text-decoration:none;" href="conversacion.php?t=<?= $slugSafe ?>&c=<?= urlencode($cv['contacto']) ?>"><?= h($cv['contacto']) ?></a>
+              <div class="prev"><?= h($cv['ultimo']) ?></div>
+            </div>
+            <div class="der">
+              <?php if (isset($escalados[$cv['contacto']])): ?>
+                <span class="estado-humano">En atención humana</span>
+                <form method="post" style="margin:0;">
+                  <?= campo_csrf() ?>
+                  <input type="hidden" name="accion" value="reactivar_bot">
+                  <input type="hidden" name="contacto" value="<?= h($cv['contacto']) ?>">
+                  <button class="btn-mini" type="submit">Reactivar bot</button>
+                </form>
+              <?php else: ?>
+                <span class="cnt"><?= (int)$cv['total'] ?> mensajes</span>
+              <?php endif; ?>
+            </div>
           </div>
-          <div class="der">
-            <?php if (isset($escalados[$cv['contacto']])): ?>
-              <span class="estado-humano">En atención humana</span>
-              <form method="post" style="margin:0;">
-                <?= campo_csrf() ?>
-                <input type="hidden" name="accion" value="reactivar_bot">
-                <input type="hidden" name="contacto" value="<?= h($cv['contacto']) ?>">
-                <button class="btn-mini" type="submit">Reactivar bot</button>
-              </form>
-            <?php else: ?>
-              <span class="cnt"><?= (int)$cv['total'] ?> mensajes</span>
-            <?php endif; ?>
-          </div>
-        </div>
-      <?php endforeach; ?>
-    </div>
-  <?php endif; ?>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+  </div>
+
+<script>
+  var tabs = document.querySelectorAll('.tab');
+  var panels = document.querySelectorAll('.tab-panel');
+  tabs.forEach(function (t) {
+    t.addEventListener('click', function () {
+      var name = t.getAttribute('data-tab');
+      tabs.forEach(function (x) { x.classList.toggle('activo', x === t); });
+      panels.forEach(function (p) { p.classList.toggle('activo', p.getAttribute('data-panel') === name); });
+    });
+  });
+</script>
 <?php
 layout_fin();
