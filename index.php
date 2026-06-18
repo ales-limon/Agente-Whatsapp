@@ -110,7 +110,7 @@ if (esta_autenticado()) { header('Location: login.php'); exit; }
       <div class="preview" aria-hidden="true">
         <div class="preview__top">
           <span class="avatar"><i class="fas fa-comment-dots"></i></span>
-          <div><strong>Consultorio Dental Paty</strong><span>en línea</span></div>
+          <div><strong>Consultorio Dental Sonrisa</strong><span>en línea</span></div>
         </div>
         <div class="preview__chat">
           <div class="b b--c">Hola, ¿tienen cita para una limpieza mañana?</div>
