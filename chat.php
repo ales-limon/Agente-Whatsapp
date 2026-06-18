@@ -68,32 +68,40 @@ $tokenCsrf     = generar_token_csrf();
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chat de prueba — <?= $negocioNombre ?></title>
+<link rel="stylesheet" href="assets/identidad.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <style>
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-         background: #e5ddd5; height: 100vh; display: flex; flex-direction: column; }
-  header { background: #075e54; color: #fff; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; }
-  header .info strong { display: block; font-size: 16px; }
-  header .info span { font-size: 12px; opacity: .85; }
-  header .acc a, header .acc button { background: rgba(255,255,255,.15); color: #fff; border: 0;
-                  padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; text-decoration: none; margin-left: 6px; }
-  header .acc a:hover, header .acc button:hover { background: rgba(255,255,255,.28); }
-  #mensajes { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
-  .burbuja { max-width: 78%; padding: 8px 12px; border-radius: 8px; font-size: 15px; line-height: 1.45; white-space: pre-wrap; word-wrap: break-word; }
-  .cliente { align-self: flex-end; background: #dcf8c6; }
-  .asistente { align-self: flex-start; background: #fff; }
-  #escribiendo { align-self: flex-start; color: #667; font-size: 13px; padding: 4px 12px; display: none; }
-  footer { background: #f0f0f0; padding: 10px; display: flex; gap: 8px; }
-  #texto { flex: 1; border: 0; border-radius: 20px; padding: 10px 16px; font-size: 15px; outline: none; }
-  #enviar { background: #075e54; color: #fff; border: 0; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; font-size: 18px; }
+  body { margin: 0; font-family: var(--fuente-cuerpo); color: var(--tinta);
+         background: #EAF1F2; height: 100vh; display: flex; flex-direction: column; }
+  .barra { background: var(--marca); color: #fff; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; }
+  .barra .info { display: flex; align-items: center; gap: 10px; }
+  .barra .avatar { width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,.14); display: inline-flex; align-items: center; justify-content: center; font-size: 16px; }
+  .barra .info strong { display: block; font-size: 15px; font-weight: 600; }
+  .barra .info span { font-size: 12px; opacity: .8; }
+  .barra .acc a, .barra .acc button { background: rgba(255,255,255,.14); color: #fff; border: 0;
+                  padding: 8px 12px; border-radius: var(--radio-sm); cursor: pointer; font-size: 13px; text-decoration: none; margin-left: 6px; font-family: inherit; }
+  .barra .acc a:hover, .barra .acc button:hover { background: rgba(255,255,255,.26); }
+  #mensajes { flex: 1; overflow-y: auto; padding: 18px; display: flex; flex-direction: column; gap: 8px; }
+  .burbuja { max-width: 78%; padding: 9px 13px; border-radius: 12px; font-size: 15px; line-height: 1.45; white-space: pre-wrap; word-wrap: break-word; }
+  .cliente { align-self: flex-end; background: var(--badge-bg); color: var(--tinta); border-bottom-right-radius: 4px; }
+  .asistente { align-self: flex-start; background: var(--superficie); border: 1px solid var(--borde); border-bottom-left-radius: 4px; }
+  #escribiendo { align-self: flex-start; color: var(--texto-2); font-size: 13px; padding: 4px 12px; display: none; }
+  footer { background: var(--superficie); border-top: 1px solid var(--borde); padding: 12px; display: flex; gap: 8px; }
+  #texto { flex: 1; border: 1.5px solid var(--borde); border-radius: 22px; padding: 11px 16px; font-size: 15px; outline: none; font-family: inherit; color: var(--tinta); }
+  #texto:focus { border-color: var(--marca); }
+  #enviar { background: var(--accion); color: #fff; border: 0; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; font-size: 16px; }
   #enviar:disabled { opacity: .5; cursor: default; }
 </style>
 </head>
 <body>
-  <header>
+  <header class="barra">
     <div class="info">
-      <strong><?= $negocioNombre ?></strong>
-      <span>Asistente de WhatsApp (prueba)</span>
+      <span class="avatar"><i class="fas fa-comment-dots"></i></span>
+      <div>
+        <strong><?= $negocioNombre ?></strong>
+        <span>Asistente de WhatsApp (prueba)</span>
+      </div>
     </div>
     <div class="acc">
       <a href="panel.php?t=<?= $slugSafe ?>">Citas</a>
@@ -110,7 +118,7 @@ $tokenCsrf     = generar_token_csrf();
 
   <footer>
     <input id="texto" type="text" placeholder="Escribe un mensaje" autocomplete="off" autofocus>
-    <button id="enviar" type="button" aria-label="Enviar">&#10148;</button>
+    <button id="enviar" type="button" aria-label="Enviar"><i class="fas fa-paper-plane"></i></button>
   </footer>
 
 <script>

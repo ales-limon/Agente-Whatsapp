@@ -49,50 +49,53 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Negocios — Agente WhatsApp</title>
+<title>Negocios — Agente de WhatsApp</title>
+<link rel="stylesheet" href="assets/identidad.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <style>
-  * { box-sizing: border-box; }
-  body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; background: #f5f5f3; color: #1c1c1a; }
-  header { background: #075e54; color: #fff; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
-  header h1 { margin: 0; font-size: 18px; font-weight: 500; }
-  header .right { font-size: 13px; }
-  header .right a { color: #cfeae3; text-decoration: none; margin-left: 14px; }
-  header .right a:hover { text-decoration: underline; }
-  .contenedor { max-width: 860px; margin: 0 auto; padding: 24px; }
-  .aviso { background: #eaf3de; color: #3b6d11; border: 1px solid #c0dd97; border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; font-size: 14px; }
-  .error { background: #fcebeb; color: #791f1f; border: 1px solid #f0a8a8; border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; font-size: 14px; }
-  h2 { font-size: 16px; font-weight: 500; margin: 26px 0 12px; }
-  .tarjeta { background: #fff; border: 1px solid #e7e7e2; border-radius: 10px; padding: 16px 18px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
-  .tarjeta .nombre { font-size: 16px; font-weight: 500; }
-  .tarjeta .meta { font-size: 13px; color: #6a6a64; margin-top: 2px; }
-  .tarjeta .links a { font-size: 13px; color: #075e54; text-decoration: none; margin-left: 12px; }
+  .barra { background: var(--marca); padding: 0 24px; height: 60px; display: flex; align-items: center; justify-content: space-between; }
+  .barra .marca__nombre { color: #fff; }
+  .barra .marca__icono { background: rgba(255,255,255,.12); }
+  .barra__right { font-size: 13px; color: #B6CDD4; }
+  .barra__right a { color: #fff; text-decoration: none; margin-left: 14px; }
+  .barra__right a:hover { text-decoration: underline; }
+  .contenedor { max-width: 880px; margin: 0 auto; padding: 28px 24px; }
+  h2 { font-family: var(--fuente-titulo); font-size: 17px; font-weight: 700; margin: 28px 0 14px; }
+  .tarjeta { background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); padding: 16px 18px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+  .tarjeta .nombre { font-size: 16px; font-weight: 600; }
+  .tarjeta .meta { font-size: 13px; color: var(--texto-2); margin-top: 3px; }
+  .tarjeta .links a { font-size: 13px; color: var(--marca); text-decoration: none; margin-left: 12px; font-weight: 500; }
   .tarjeta .links a:hover { text-decoration: underline; }
-  .vacio { background: #fff; border: 1px solid #e7e7e2; border-radius: 10px; padding: 22px; text-align: center; color: #888; margin-bottom: 12px; }
-  .panel { background: #fff; border: 1px solid #e7e7e2; border-radius: 10px; padding: 18px 20px; }
-  .panel h3 { font-size: 14px; font-weight: 500; margin: 0 0 12px; }
-  .panel input, .panel select { padding: 9px 11px; border: 1px solid #d6d6d0; border-radius: 6px; font-size: 14px; margin: 0 6px 8px 0; }
-  .panel button { background: #075e54; color: #fff; border: 0; border-radius: 6px; padding: 9px 16px; font-size: 14px; cursor: pointer; }
-  .panel button:hover { background: #064a42; }
-  table.us { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #e7e7e2; border-radius: 10px; overflow: hidden; margin-bottom: 12px; }
-  table.us th, table.us td { text-align: left; padding: 9px 14px; font-size: 13px; border-bottom: 1px solid #f0f0ec; }
-  table.us th { background: #fafaf8; color: #6a6a64; font-weight: 500; font-size: 12px; }
+  .vacio { background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); padding: 22px; text-align: center; color: var(--texto-2); margin-bottom: 12px; }
+  .panel { background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); padding: 18px 20px; }
+  .panel h3 { font-family: var(--fuente-titulo); font-size: 15px; font-weight: 700; margin: 0 0 12px; }
+  .panel input, .panel select { padding: 10px 12px; border: 1.5px solid var(--borde); border-radius: var(--radio); font-size: 14px; font-family: var(--fuente-cuerpo); color: var(--tinta); background: var(--superficie); margin: 0 6px 8px 0; }
+  .input-mini { padding: 7px 10px; border: 1.5px solid var(--borde); border-radius: var(--radio-sm); font-size: 13px; font-family: var(--fuente-cuerpo); color: var(--tinta); background: var(--superficie); }
+  .btn-mini { padding: 7px 12px; border: 1.5px solid var(--borde); background: var(--superficie); color: var(--tinta); border-radius: var(--radio-sm); font-size: 13px; cursor: pointer; }
+  .btn-mini:hover { background: #F4F8F9; }
+  table.us { width: 100%; border-collapse: collapse; background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); overflow: hidden; margin-bottom: 12px; }
+  table.us th, table.us td { text-align: left; padding: 10px 14px; font-size: 13px; border-bottom: 1px solid var(--borde); }
+  table.us th { background: #F4F8F9; color: var(--texto-2); font-weight: 600; font-size: 12px; }
   table.us tr:last-child td { border-bottom: 0; }
-  .pill { font-size: 11px; padding: 2px 8px; border-radius: 5px; background: #e1f5ee; color: #0f6e56; }
-  .pill.sa { background: #eee8fb; color: #534ab7; }
+  .pill { font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--badge-bg); color: var(--badge-texto); }
+  .pill.sa { background: #ECE9FB; color: #534AB7; }
 </style>
 </head>
 <body>
-  <header>
-    <h1>Negocios</h1>
-    <div class="right">
+  <header class="barra">
+    <div class="marca">
+      <span class="marca__icono"><i class="fas fa-comment-dots"></i></span>
+      <span class="marca__nombre">Agente de WhatsApp</span>
+    </div>
+    <div class="barra__right">
       <?= h(usuario_actual()['email']) ?>
       <a href="logout.php">Salir</a>
     </div>
   </header>
 
   <div class="contenedor">
-    <?php if ($mensaje): ?><div class="aviso"><?= h($mensaje) ?></div><?php endif; ?>
-    <?php if ($error): ?><div class="error"><?= h($error) ?></div><?php endif; ?>
+    <?php if ($mensaje): ?><div class="alerta alerta--ok"><i class="fas fa-check-circle"></i><span><?= h($mensaje) ?></span></div><?php endif; ?>
+    <?php if ($error): ?><div class="alerta alerta--error"><i class="fas fa-exclamation-triangle"></i><span><?= h($error) ?></span></div><?php endif; ?>
 
     <h2 style="margin-top:8px;">Negocios</h2>
     <?php if (!$negocios): ?>
@@ -108,15 +111,15 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
             <?= campo_csrf() ?>
             <input type="hidden" name="accion" value="asignar_numero">
             <input type="hidden" name="id_negocio" value="<?= (int)$n['id'] ?>">
-            <input type="text" name="numero" value="<?= h($n['numero_whatsapp']) ?>" placeholder="+5213..." style="padding:6px 9px; border:1px solid #d6d6d0; border-radius:6px; font-size:13px;">
-            <button type="submit" style="padding:6px 12px; border:1px solid #d6d6d0; background:#fff; border-radius:6px; font-size:13px; cursor:pointer;">Asignar número</button>
+            <input class="input-mini" type="text" name="numero" value="<?= h($n['numero_whatsapp']) ?>" placeholder="+5213...">
+            <button class="btn-mini" type="submit">Asignar número</button>
           </form>
           <form method="post" style="margin-top:6px; display:flex; gap:6px; align-items:center;">
             <?= campo_csrf() ?>
             <input type="hidden" name="accion" value="fijar_limite">
             <input type="hidden" name="id_negocio" value="<?= (int)$n['id'] ?>">
-            <input type="number" name="limite" min="0" value="<?= $lim ?>" style="width:110px; padding:6px 9px; border:1px solid #d6d6d0; border-radius:6px; font-size:13px;">
-            <button type="submit" style="padding:6px 12px; border:1px solid #d6d6d0; background:#fff; border-radius:6px; font-size:13px; cursor:pointer;">Límite/mes (0 = ilimitado)</button>
+            <input class="input-mini" style="width:110px;" type="number" name="limite" min="0" value="<?= $lim ?>">
+            <button class="btn-mini" type="submit">Límite/mes (0 = ilimitado)</button>
           </form>
         </div>
         <div class="links">
@@ -134,7 +137,7 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
         <input type="hidden" name="accion" value="crear_negocio">
         <input type="text" name="nombre" placeholder="Nombre del negocio" required>
         <input type="text" name="slug" placeholder="slug (opcional)">
-        <button type="submit">Crear y configurar</button>
+        <button class="btn btn--primario" type="submit">Crear y configurar</button>
       </form>
     </div>
 
@@ -170,7 +173,7 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
             <option value="<?= (int)$n['id'] ?>"><?= h($n['nombre']) ?></option>
           <?php endforeach; ?>
         </select>
-        <button type="submit">Crear usuario</button>
+        <button class="btn btn--primario" type="submit">Crear usuario</button>
       </form>
     </div>
   </div>

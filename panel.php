@@ -70,40 +70,43 @@ function badge_estado(string $estado): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Citas — <?= h($negocio['nombre']) ?></title>
+<link rel="stylesheet" href="assets/identidad.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <style>
-  * { box-sizing: border-box; }
-  body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; background: #f5f5f3; color: #1c1c1a; }
-  header { background: #075e54; color: #fff; padding: 16px 24px; }
-  header h1 { margin: 0; font-size: 18px; font-weight: 500; }
-  header nav { margin-top: 6px; font-size: 13px; }
-  header nav a { color: #cfeae3; text-decoration: none; margin-right: 14px; }
-  header nav a:hover { text-decoration: underline; }
-  .contenedor { max-width: 980px; margin: 0 auto; padding: 24px; }
-  .tarjetas { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
-  .tarjeta { background: #fff; border: 1px solid #e7e7e2; border-radius: 10px; padding: 14px 18px; min-width: 150px; }
-  .tarjeta .num { font-size: 26px; font-weight: 500; }
-  .tarjeta .lbl { font-size: 13px; color: #6a6a64; }
-  h2 { font-size: 16px; font-weight: 500; margin: 0 0 12px; }
-  table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #e7e7e2; border-radius: 10px; overflow: hidden; }
-  th, td { text-align: left; padding: 10px 14px; font-size: 14px; border-bottom: 1px solid #f0f0ec; }
-  th { background: #fafaf8; font-weight: 500; color: #6a6a64; font-size: 12px; }
+  .barra { background: var(--marca); padding: 0 24px; height: 60px; display: flex; align-items: center; justify-content: space-between; }
+  .barra .marca__nombre { color: #fff; }
+  .barra .marca__icono { background: rgba(255,255,255,.12); }
+  .barra__nav a { color: #B6CDD4; font-size: 13px; text-decoration: none; margin-left: 18px; }
+  .barra__nav a:hover { color: #fff; }
+  .contenedor { max-width: 980px; margin: 0 auto; padding: 28px 24px; }
+  .titulo-pagina { font-size: 24px; margin: 0 0 22px; }
+  .tarjetas { display: flex; gap: 12px; margin-bottom: 26px; flex-wrap: wrap; }
+  .tarjeta { background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); padding: 16px 18px; min-width: 150px; }
+  .tarjeta .num { font-family: var(--fuente-titulo); font-size: 28px; font-weight: 700; color: var(--tinta); }
+  .tarjeta .lbl { font-size: 13px; color: var(--texto-2); margin-top: 2px; }
+  h2 { font-family: var(--fuente-titulo); font-size: 17px; font-weight: 700; margin: 0 0 12px; }
+  table { width: 100%; border-collapse: collapse; background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); overflow: hidden; }
+  th, td { text-align: left; padding: 11px 14px; font-size: 14px; border-bottom: 1px solid var(--borde); }
+  th { background: #F4F8F9; font-weight: 600; color: var(--texto-2); font-size: 12px; }
   tr:last-child td { border-bottom: 0; }
-  .vacio { background: #fff; border: 1px solid #e7e7e2; border-radius: 10px; padding: 28px; text-align: center; color: #888; }
-  .acciones button { border: 1px solid #d6d6d0; background: #fff; border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer; margin-right: 4px; }
-  .acciones button:hover { background: #f3f3ef; }
-  .conv { background: #fff; border: 1px solid #e7e7e2; border-radius: 10px; padding: 4px 0; margin-top: 24px; }
-  .conv .fila { padding: 10px 16px; border-bottom: 1px solid #f0f0ec; display: flex; justify-content: space-between; gap: 16px; }
+  .vacio { background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); padding: 28px; text-align: center; color: var(--texto-2); }
+  .acciones .btn { padding: 6px 12px; font-size: 12px; margin-right: 6px; }
+  .conv { background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); padding: 4px 0; margin-top: 24px; }
+  .conv .fila { padding: 11px 16px; border-bottom: 1px solid var(--borde); display: flex; justify-content: space-between; gap: 16px; }
   .conv .fila:last-child { border-bottom: 0; }
   .conv .contacto { font-weight: 500; font-size: 14px; }
-  .conv .prev { color: #6a6a64; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 520px; }
-  .conv .cnt { font-size: 12px; color: #999; white-space: nowrap; }
+  .conv .prev { color: var(--texto-2); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 520px; }
+  .conv .cnt { font-size: 12px; color: var(--texto-2); white-space: nowrap; }
 </style>
 </head>
 <body>
-  <header>
-    <h1>Citas — <?= h($negocio['nombre']) ?></h1>
-    <nav>
-      <?php if (es_superadmin()): ?><a href="superadmin.php">&larr; Negocios</a><?php endif; ?>
+  <header class="barra">
+    <div class="marca">
+      <span class="marca__icono"><i class="fas fa-comment-dots"></i></span>
+      <span class="marca__nombre">Agente de WhatsApp</span>
+    </div>
+    <nav class="barra__nav">
+      <?php if (es_superadmin()): ?><a href="superadmin.php"><i class="fas fa-arrow-left"></i> Negocios</a><?php endif; ?>
       <a href="configuracion.php?t=<?= $slugSafe ?>">Configuración</a>
       <a href="panel.php?t=<?= $slugSafe ?>">Citas</a>
       <a href="chat.php?t=<?= $slugSafe ?>">Probar chat</a>
@@ -112,9 +115,11 @@ function badge_estado(string $estado): string {
   </header>
 
   <div class="contenedor">
+    <h1 class="titulo-pagina">Citas — <?= h($negocio['nombre']) ?></h1>
+
     <div class="tarjetas">
       <div class="tarjeta"><div class="num"><?= count($citas) ?></div><div class="lbl">Citas totales</div></div>
-      <div class="tarjeta"><div class="num" style="color:#854f0b;"><?= $pendientes ?></div><div class="lbl">Por confirmar</div></div>
+      <div class="tarjeta"><div class="num" style="color:var(--aviso-texto);"><?= $pendientes ?></div><div class="lbl">Por confirmar</div></div>
       <div class="tarjeta"><div class="num"><?= count($conversaciones) ?></div><div class="lbl">Conversaciones</div></div>
     </div>
 
@@ -141,8 +146,8 @@ function badge_estado(string $estado): string {
                 <form method="post" style="display:inline;">
                   <?= campo_csrf() ?>
                   <input type="hidden" name="id" value="<?= h($c['id']) ?>">
-                  <button name="accion" value="confirmar">Confirmar</button>
-                  <button name="accion" value="cancelar">Cancelar</button>
+                  <button class="btn btn--primario" name="accion" value="confirmar">Confirmar</button>
+                  <button class="btn btn--secundario" name="accion" value="cancelar">Cancelar</button>
                 </form>
               <?php endif; ?>
             </td>
