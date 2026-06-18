@@ -84,14 +84,19 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0A2B3A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="<?= $negocioNombre ?>">
 <title>Chat — <?= $negocioNombre ?></title>
 <link rel="stylesheet" href="assets/identidad.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <style>
-  body { margin: 0; background: #EAF1F2; min-height: 100vh; display: flex; align-items: stretch; justify-content: center; }
-  .chat { width: 100%; max-width: 520px; height: 100vh; display: flex; flex-direction: column; background: #EAF1F2; }
-  .chat-top { background: var(--marca); color: #fff; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  body { margin: 0; background: #EAF1F2; min-height: 100vh; min-height: 100dvh; display: flex; align-items: stretch; justify-content: center; overflow-x: hidden; }
+  .chat { width: 100%; max-width: 520px; height: 100vh; height: 100dvh; display: flex; flex-direction: column; background: #EAF1F2; }
+  .chat-top { background: var(--marca); color: #fff; padding: calc(12px + env(safe-area-inset-top)) 16px 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .chat-top .info { display: flex; align-items: center; gap: 10px; min-width: 0; }
   .chat-top .avatar { width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,.14); display: inline-flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
   .chat-top strong { display: block; font-size: 15px; font-weight: 600; }
@@ -102,8 +107,8 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
   .cliente { align-self: flex-end; background: var(--badge-bg); color: var(--tinta); border-bottom-right-radius: 4px; }
   .asistente { align-self: flex-start; background: var(--superficie); border: 1px solid var(--borde); border-bottom-left-radius: 4px; }
   #escribiendo { color: var(--texto-2); font-size: 13px; padding: 4px 18px; display: none; }
-  .chat-footer { background: var(--superficie); border-top: 1px solid var(--borde); padding: 12px; display: flex; gap: 8px; }
-  #texto { flex: 1; border: 1.5px solid var(--borde); border-radius: 22px; padding: 11px 16px; font-size: 15px; outline: none; font-family: var(--fuente-cuerpo); color: var(--tinta); }
+  .chat-footer { background: var(--superficie); border-top: 1px solid var(--borde); padding: 12px; padding-bottom: calc(12px + env(safe-area-inset-bottom)); display: flex; gap: 8px; align-items: center; }
+  #texto { flex: 1; min-width: 0; border: 1.5px solid var(--borde); border-radius: 22px; padding: 11px 16px; font-size: 16px; outline: none; font-family: var(--fuente-cuerpo); color: var(--tinta); }
   #texto:focus { border-color: var(--marca); }
   #enviar { background: var(--accion); color: #fff; border: 0; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; font-size: 16px; flex-shrink: 0; }
   #enviar:disabled { opacity: .5; cursor: default; }
