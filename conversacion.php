@@ -8,6 +8,7 @@ require_once __DIR__ . '/src/entorno.php';
 require_once __DIR__ . '/src/auth.php';
 require_once __DIR__ . '/src/negocios.php';
 require_once __DIR__ . '/src/conocimiento.php';
+require_once __DIR__ . '/src/conversaciones.php';
 require_once __DIR__ . '/src/layout.php';
 require_once __DIR__ . '/src/escalacion.php';
 require_once __DIR__ . '/src/notificaciones.php';
