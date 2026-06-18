@@ -59,6 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $c         = cargar_conocimiento($idNegocio);
 $servicios = $c['servicios'] ?? [];
 $horario   = $c['horario_estructurado'] ?? [];
+$urlChat   = base_url() . '/chat-publico.php?t=' . urlencode($negocio['slug']);
 function val($a, $k, $d = '') { return htmlspecialchars((string)($a[$k] ?? $d), ENT_QUOTES, 'UTF-8'); }
 
 $css = '
@@ -171,7 +172,20 @@ layout_inicio('Configuración', 'negocio', 'config', ['negocio' => $negocio, 'cs
     <button type="submit" class="btn btn--primario">Guardar configuración</button>
   </form>
 
+  <div class="seccion" style="max-width:680px;">
+    <h2>Chat web del negocio</h2>
+    <p class="hint" style="margin:-6px 0 14px;">Comparte este enlace o el código QR para que tus clientes chateen con el asistente desde el navegador, sin WhatsApp.</p>
+    <div class="grupo">
+      <label>Enlace del chat web</label>
+      <input type="text" readonly value="<?= htmlspecialchars($urlChat, ENT_QUOTES, 'UTF-8') ?>" onclick="this.select()">
+    </div>
+    <div id="qr" style="display:inline-block; padding:12px; background:#fff; border:1px solid var(--borde); border-radius:var(--radio);"></div>
+  </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
+  new QRCode(document.getElementById('qr'), { text: <?= json_encode($urlChat) ?>, width: 176, height: 176, colorDark: '#0A2B3A', colorLight: '#ffffff' });
+
   document.querySelectorAll('.chk-dia').forEach(function (chk) {
     chk.addEventListener('change', function () {
       document.querySelector('[data-horas="' + this.dataset.dia + '"]').style.display = this.checked ? '' : 'none';
