@@ -108,3 +108,13 @@ CREATE TABLE IF NOT EXISTS uso_mensual (
   UNIQUE KEY uniq_negocio_periodo (id_negocio, periodo),
   FOREIGN KEY (id_negocio) REFERENCES negocios(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Enlace muchos-a-muchos: un usuario puede administrar varios negocios.
+CREATE TABLE IF NOT EXISTS usuario_negocio (
+  id_usuario INT NOT NULL,
+  id_negocio INT NOT NULL,
+  creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id_usuario, id_negocio),
+  FOREIGN KEY (id_usuario) REFERENCES usuarios(id) ON DELETE CASCADE,
+  FOREIGN KEY (id_negocio) REFERENCES negocios(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

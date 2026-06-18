@@ -13,12 +13,16 @@ if (!existe_superadmin()) {
 }
 
 function ir_segun_rol(): void {
+    $negs = negocios_del_usuario();
     if (es_superadmin()) {
-        header('Location: superadmin.php');
-    } else {
-        $neg = obtener_id_negocio_usuario() ? negocio_por_id(obtener_id_negocio_usuario()) : null;
-        header('Location: ' . ($neg ? 'panel.php?t=' . urlencode($neg['slug']) : 'login.php'));
+        // Con negocios dados de alta, ofrecemos el menú (panel de superadmin + negocios).
+        header('Location: ' . (count($negs) > 0 ? 'seleccionar.php' : 'superadmin.php'));
+        exit;
     }
+    // Admin: un solo negocio entra directo; varios muestran el menú; ninguno vuelve al login.
+    if (count($negs) === 1) { header('Location: panel.php?t=' . urlencode($negs[0]['slug'])); exit; }
+    if (count($negs) >= 2)  { header('Location: seleccionar.php'); exit; }
+    header('Location: login.php');
     exit;
 }
 

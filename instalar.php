@@ -49,6 +49,11 @@ if (!$colExiste('negocios', 'limite_mensajes_mes')) {
     echo "Columna negocios.limite_mensajes_mes agregada.\n";
 }
 
+// Backfill del enlace usuario-negocio desde la columna usuarios.id_negocio (idempotente).
+$pdo->exec("INSERT IGNORE INTO usuario_negocio (id_usuario, id_negocio)
+            SELECT id, id_negocio FROM usuarios WHERE id_negocio IS NOT NULL");
+echo "Enlaces usuario-negocio respaldados.\n";
+
 // 3. Migrar el negocio del JSON la primera vez
 $hay = (int)$pdo->query("SELECT COUNT(*) FROM negocios")->fetchColumn();
 if ($hay > 0) {

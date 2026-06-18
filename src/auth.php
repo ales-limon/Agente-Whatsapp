@@ -114,12 +114,42 @@ function requiere_superadmin(): void {
     }
 }
 
+// Vincula un usuario a un negocio (idempotente). Un usuario puede tener varios.
+function vincular_usuario_negocio(int $idUsuario, int $idNegocio): void {
+    $st = conexion()->prepare("INSERT IGNORE INTO usuario_negocio (id_usuario, id_negocio) VALUES (?, ?)");
+    $st->execute([$idUsuario, $idNegocio]);
+}
+
+// Negocios a los que el usuario ACTUAL tiene acceso. Superadmin => todos.
+function negocios_del_usuario(): array {
+    if (es_superadmin()) return listar_negocios();
+    $idUsuario = obtener_id_usuario();
+    if (!$idUsuario) return [];
+    $st = conexion()->prepare(
+        "SELECT n.* FROM negocios n
+         JOIN usuario_negocio un ON un.id_negocio = n.id
+         WHERE un.id_usuario = ? AND n.activo = 1
+         ORDER BY n.nombre"
+    );
+    $st->execute([$idUsuario]);
+    return $st->fetchAll();
+}
+
+// ¿El usuario ACTUAL puede operar sobre este negocio? Superadmin => sí siempre.
+function usuario_tiene_acceso_negocio(int $idNegocio): bool {
+    if (es_superadmin()) return true;
+    $idUsuario = obtener_id_usuario();
+    if (!$idUsuario) return false;
+    $st = conexion()->prepare("SELECT 1 FROM usuario_negocio WHERE id_usuario = ? AND id_negocio = ? LIMIT 1");
+    $st->execute([$idUsuario, $idNegocio]);
+    return (bool)$st->fetchColumn();
+}
+
 // Garantiza que el usuario actual puede operar sobre $idNegocio.
-// Superadmin: cualquiera. Admin: solo el suyo. Otro intento => violacion_multitenant.
+// Superadmin: cualquiera. Admin: solo los negocios vinculados. Otro intento => violacion_multitenant.
 function requiere_acceso_negocio(int $idNegocio): void {
     requiere_autenticacion();
-    if (es_superadmin()) return;
-    if (obtener_id_negocio_usuario() === $idNegocio) return;
+    if (usuario_tiene_acceso_negocio($idNegocio)) return;
     log_evento_seguridad('violacion_multitenant', [
         'ruta' => $_SERVER['REQUEST_URI'] ?? '',
         'id_negocio_intentado' => $idNegocio,
@@ -147,9 +177,13 @@ function crear_usuario(string $email, string $password, string $nombre, string $
     $hash = password_hash($password, PASSWORD_DEFAULT);
     $st = $pdo->prepare("INSERT INTO usuarios (email, password_hash, nombre, rol, id_negocio, activo) VALUES (?, ?, ?, ?, ?, 1)");
     $st->execute([$email, $hash, trim($nombre), $rol, $idNegocio]);
+    $nuevoId = (int)$pdo->lastInsertId();
+
+    // Vínculo en la tabla muchos-a-muchos (un admin puede administrar varios negocios).
+    if ($rol === 'admin' && $idNegocio) vincular_usuario_negocio($nuevoId, (int)$idNegocio);
 
     log_evento_seguridad('usuario_creado', ['email' => $email, 'rol' => $rol], obtener_id_usuario(), $idNegocio);
-    return ['exito' => true, 'id' => (int)$pdo->lastInsertId()];
+    return ['exito' => true, 'id' => $nuevoId];
 }
 
 function listar_usuarios(): array {
