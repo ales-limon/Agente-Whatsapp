@@ -34,6 +34,17 @@ if (empty($_SESSION[$claveVis])) {
 }
 $contacto = $_SESSION[$claveVis];
 
+// --- Polling: mensajes nuevos desde un id (para ver respuestas de una persona) ---
+if (isset($_GET['nuevos'])) {
+    $desde = (int)$_GET['nuevos'];
+    $st = conexion()->prepare("SELECT id, rol, contenido FROM mensajes WHERE id_negocio = ? AND contacto = ? AND id > ? ORDER BY id");
+    $st->execute([$idNegocio, $contacto, $desde]);
+    while (ob_get_level()) { ob_end_clean(); }
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['mensajes' => $st->fetchAll(PDO::FETCH_ASSOC)], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 // --- AJAX: recibe un mensaje del visitante y responde ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     requiere_csrf();
@@ -47,14 +58,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Tope de uso del plan: no gastamos IA si se alcanzó el límite del mes.
     if (!dentro_de_limite($negocio)) {
         guardar_mensaje($idNegocio, $contacto, 'user', $mensaje);
-        echo json_encode(['respuesta' => 'Gracias por tu mensaje. En este momento no puedo atenderte de forma automática; una persona de ' . $negocio['nombre'] . ' te responderá en breve.'], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['respuesta' => 'Gracias por tu mensaje. En este momento no puedo atenderte de forma automática; una persona de ' . $negocio['nombre'] . ' te responderá en breve.', 'ultimoId' => (int)conexion()->lastInsertId()], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
-    // Escalado a humano: el bot queda en pausa para esta conversación.
+    // Escalado a humano: el bot queda en pausa. No respondemos (una persona contesta
+    // desde el panel y el cliente lo verá por el polling).
     if (handoff_activo($idNegocio, $contacto)) {
         guardar_mensaje($idNegocio, $contacto, 'user', $mensaje);
-        echo json_encode(['respuesta' => 'Tu mensaje fue recibido. Una persona de ' . $negocio['nombre'] . ' continuará contigo en breve.'], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['respuesta' => '', 'ultimoId' => (int)conexion()->lastInsertId()], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
@@ -67,9 +79,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     guardar_mensaje($idNegocio, $contacto, 'user', $mensaje);
     guardar_mensaje($idNegocio, $contacto, 'assistant', $respuesta);
+    $ultId = (int)conexion()->lastInsertId();
     registrar_uso($idNegocio, (int)$uso['entrada'], (int)$uso['salida']);
 
-    echo json_encode(['respuesta' => $respuesta], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['respuesta' => $respuesta, 'ultimoId' => $ultId], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -78,6 +91,9 @@ $tokenCsrf     = generar_token_csrf();
 $waNumero      = preg_replace('/[^0-9]/', '', (string)($negocio['numero_whatsapp'] ?? ''));
 $waLink        = $waNumero !== '' ? 'https://wa.me/' . $waNumero : '';
 $historial     = cargar_historial($idNegocio, $contacto);
+$stMax = conexion()->prepare("SELECT COALESCE(MAX(id),0) FROM mensajes WHERE id_negocio = ? AND contacto = ?");
+$stMax->execute([$idNegocio, $contacto]);
+$ultimoId      = (int)$stMax->fetchColumn();
 function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 ?>
 <!DOCTYPE html>
@@ -151,6 +167,7 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
   const btn = document.getElementById('enviar');
   const ENDPOINT = location.pathname + location.search;
   const CSRF = '<?= $tokenCsrf ?>';
+  let ultimoId = <?= (int)$ultimoId ?>;
 
   cont.scrollTop = cont.scrollHeight;
 
@@ -173,7 +190,9 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
     try {
       const r = await fetch(ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF }, body: JSON.stringify({ mensaje }) });
       const data = await r.json();
-      agregar(data.respuesta || data.error || 'Sin respuesta.', 'asistente');
+      if (typeof data.ultimoId !== 'undefined') ultimoId = Math.max(ultimoId, data.ultimoId);
+      if (data.respuesta) agregar(data.respuesta, 'asistente');
+      else if (data.error) agregar(data.error, 'asistente');
     } catch (e) {
       agregar('No se pudo enviar tu mensaje. Revisa tu conexión e intenta de nuevo.', 'asistente');
     } finally {
@@ -185,6 +204,19 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 
   btn.addEventListener('click', enviar);
   input.addEventListener('keydown', e => { if (e.key === 'Enter') enviar(); });
+
+  // Polling: muestra respuestas de una persona del negocio en vivo.
+  async function poll() {
+    try {
+      const r = await fetch(ENDPOINT + '&nuevos=' + ultimoId);
+      const d = await r.json();
+      (d.mensajes || []).forEach(function (m) {
+        ultimoId = Math.max(ultimoId, parseInt(m.id, 10));
+        agregar(m.contenido, m.rol === 'assistant' ? 'asistente' : 'cliente');
+      });
+    } catch (e) {}
+  }
+  setInterval(poll, 4000);
 </script>
 </body>
 </html>

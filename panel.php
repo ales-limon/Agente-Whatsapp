@@ -101,7 +101,7 @@ layout_inicio('Citas', 'negocio', 'citas', ['negocio' => $negocio, 'css' => $css
       <?php foreach ($escalados as $contacto => $e): ?>
         <div class="atencion__fila">
           <div>
-            <div class="atencion__num"><?= h($contacto) ?></div>
+            <a class="atencion__num" style="text-decoration:none;" href="conversacion.php?t=<?= $slugSafe ?>&c=<?= urlencode($contacto) ?>"><?= h($contacto) ?></a>
             <?php if (!empty($e['motivo'])): ?><div class="atencion__motivo"><?= h($e['motivo']) ?></div><?php endif; ?>
           </div>
           <form method="post" style="margin:0;">
@@ -161,7 +161,7 @@ layout_inicio('Citas', 'negocio', 'citas', ['negocio' => $negocio, 'css' => $css
       <?php foreach ($conversaciones as $cv): ?>
         <div class="fila">
           <div>
-            <div class="contacto"><?= h($cv['contacto']) ?></div>
+            <a class="contacto" style="text-decoration:none;" href="conversacion.php?t=<?= $slugSafe ?>&c=<?= urlencode($cv['contacto']) ?>"><?= h($cv['contacto']) ?></a>
             <div class="prev"><?= h($cv['ultimo']) ?></div>
           </div>
           <div class="der">
