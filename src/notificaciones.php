@@ -111,13 +111,14 @@ function avisar_cita_agendada(array $c, array $cita): void {
     $contentSid = trim((string) env('TWILIO_PLANTILLA_CITA', ''));
     if ($contentSid !== '') {
         try {
-            enviar_whatsapp_plantilla($para, $desde, $contentSid, [
+            $r = enviar_whatsapp_plantilla($para, $desde, $contentSid, [
                 '1' => (string)($c['negocio'] ?? ''),
                 '2' => (string)($cita['nombre'] ?? ''),
                 '3' => (string)($cita['servicio'] ?? ''),
                 '4' => $cuando,
             ]);
-            return;
+            if (!empty($r['exito'])) return; // entregada por plantilla
+            // si falló (ej. plantilla aún no aprobada) seguimos al mensaje libre como respaldo
         } catch (Throwable $e) {
             error_log('avisar_cita_agendada (plantilla): ' . $e->getMessage());
         }
