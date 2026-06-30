@@ -168,6 +168,7 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
   const ENDPOINT = location.pathname + location.search;
   const CSRF = '<?= $tokenCsrf ?>';
   let ultimoId = <?= (int)$ultimoId ?>;
+  let enviando = false;
 
   cont.scrollTop = cont.scrollHeight;
 
@@ -180,8 +181,10 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
   }
 
   async function enviar() {
+    if (enviando) return;
     const mensaje = input.value.trim();
     if (!mensaje) return;
+    enviando = true;
     agregar(mensaje, 'cliente');
     input.value = '';
     btn.disabled = true;
@@ -198,6 +201,7 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
     } finally {
       escribiendo.style.display = 'none';
       btn.disabled = false;
+      enviando = false;
       input.focus();
     }
   }
@@ -207,6 +211,7 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 
   // Polling: muestra respuestas de una persona del negocio en vivo.
   async function poll() {
+    if (enviando) return; // no competir con un envío en curso (evita duplicados)
     try {
       const r = await fetch(ENDPOINT + '&nuevos=' + ultimoId);
       const d = await r.json();
