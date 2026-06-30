@@ -25,6 +25,7 @@ function cargar_conocimiento(int $idNegocio): array {
         'numero_avisos'       => $n['numero_avisos'] ?? '',
         'horario_estructurado' => [],
         'servicios'           => [],
+        'recursos'            => [],
     ];
 
     $st = $pdo->prepare("SELECT dia, abre, cierra FROM horarios WHERE id_negocio = ?");
@@ -46,6 +47,13 @@ function cargar_conocimiento(int $idNegocio): array {
             'precio'   => ($precio == floor($precio)) ? (string)(int)$precio : number_format($precio, 2, '.', ''),
             'duracion' => (int)$s['duracion'],
         ];
+    }
+
+    $st = $pdo->prepare("SELECT nombre FROM recursos WHERE id_negocio = ? AND activo = 1 ORDER BY orden, id");
+    $st->execute([$idNegocio]);
+    foreach ($st as $r) {
+        $nombre = trim((string)($r['nombre'] ?? ''));
+        if ($nombre !== '') $c['recursos'][] = $nombre;
     }
     return $c;
 }
@@ -101,6 +109,16 @@ function construir_system_prompt(array $c): string {
     }
     if ($servicios === '') $servicios = "(sin servicios cargados)\n";
 
+    // Personal que atiende (opcional). Si hay varias personas, el cliente puede
+    // pedir cita con alguien y cada quien lleva su propia agenda.
+    $recursos       = $c['recursos'] ?? [];
+    $personalBloque = '';
+    if ($recursos) {
+        $lista = implode(', ', $recursos);
+        $personalBloque = "\nPERSONAL QUE ATIENDE: {$lista}\n"
+            . "El cliente puede pedir cita con una persona en especifico o dejar que tu asignes a quien este libre. Cada persona tiene su propia agenda: una hora puede estar libre con una y ocupada con otra.\n";
+    }
+
     $bloqueExtra = $extra !== '' ? "\nINSTRUCCIONES ADICIONALES DEL NEGOCIO:\n{$extra}\n" : '';
 
     return <<<PROMPT
@@ -114,7 +132,7 @@ Ubicacion: {$ubicacion}
 
 Servicios y precios:
 {$servicios}
-Politicas: {$politicas}
+{$personalBloque}Politicas: {$politicas}
 {$bloqueExtra}
 CONTEXTO: Hoy es {$fechaHoy}.
 TABLA DE PROXIMOS DIAS (usala para convertir "manana", "el sabado", "la proxima semana", etc. a la fecha exacta. NO calcules las fechas de memoria, BUSCALAS en esta tabla):
@@ -129,6 +147,7 @@ REGLAS:
 - Cuando tengas nombre completo, servicio, dia y hora, y el cliente confirme, usa la herramienta registrar_cita. Pasa la fecha en formato YYYY-MM-DD y la hora en formato de 24 horas HH:MM. NO afirmes que quedo registrada hasta que la herramienta lo confirme.
 - Si la herramienta dice que falta el apellido, pideselo y reintenta. Si dice que el horario esta OCUPADO o que el servicio NO CABE en ese horario, discúlpate y ofrece otro horario; nunca encimes dos citas.
 - Si el cliente pregunta que horarios hay disponibles un dia, usa consultar_disponibilidad y dile los libres. Usala tambien para sugerir horarios cuando el que pidio el cliente este ocupado.
+- Si arriba aparece una lista de PERSONAL, puedes preguntar al cliente si prefiere a alguien, pero no es obligatorio. Si menciona a una persona, pasa su nombre en el parametro 'profesional' (en registrar_cita y en consultar_disponibilidad). Si esa persona esta ocupada a la hora pedida, ofrece otra hora con ella u otra persona. Si el cliente no tiene preferencia, no pases 'profesional' y el sistema asigna a quien este libre.
 - Si el cliente pregunta por una cita que ya tiene, PRIMERO pidele su nombre completo para verificar su identidad; luego usa consultar_cita. Nunca des informacion de una cita sin verificar antes el nombre completo.
 - No prometas cosas que no puedas cumplir. Si no estas seguro de algo, ofrece pasar la conversacion con una persona del negocio.
 PROMPT;

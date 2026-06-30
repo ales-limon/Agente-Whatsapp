@@ -52,6 +52,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $datos['servicios'][] = ['nombre' => $n, 'precio' => trim($precios[$i] ?? '0'), 'duracion' => max(5, (int)($duraciones[$i] ?? 30))];
     }
 
+    $datos['recursos'] = [];
+    foreach (($_POST['profesional_nombre'] ?? []) as $pn) {
+        $pn = trim($pn);
+        if ($pn !== '') $datos['recursos'][] = $pn;
+    }
+
     guardar_configuracion($idNegocio, $datos);
 
     // Dirección (slug) del chat web: editable, con validación de unicidad.
@@ -73,6 +79,7 @@ if (isset($_GET['guardado'])) $mensaje = 'Configuración guardada correctamente.
 
 $c         = cargar_conocimiento($idNegocio);
 $servicios = $c['servicios'] ?? [];
+$recursos  = $c['recursos'] ?? [];
 $horario   = $c['horario_estructurado'] ?? [];
 $urlChat   = base_url() . '/chat-publico.php?t=' . urlencode($negocio['slug']);
 function val($a, $k, $d = '') { return htmlspecialchars((string)($a[$k] ?? $d), ENT_QUOTES, 'UTF-8'); }
@@ -133,6 +140,7 @@ layout_inicio('Configuración', 'negocio', 'config', ['negocio' => $negocio, 'cs
     <button type="button" class="tab activo" data-tab="datos">Datos</button>
     <button type="button" class="tab" data-tab="horario">Horario</button>
     <button type="button" class="tab" data-tab="servicios">Servicios</button>
+    <button type="button" class="tab" data-tab="personal">Personal</button>
     <button type="button" class="tab" data-tab="reglas">Reglas</button>
     <button type="button" class="tab" data-tab="chatweb">Chat web</button>
   </div>
@@ -208,6 +216,25 @@ layout_inicio('Configuración', 'negocio', 'config', ['negocio' => $negocio, 'cs
       </div>
     </div>
 
+    <div class="tab-panel" data-panel="personal">
+      <div class="seccion">
+        <h2>Personal que atiende</h2>
+        <p style="font-size:13px;color:var(--texto-2);margin:0 0 14px;">Las personas que dan el servicio (barberos, estilistas, especialistas...). Si registras más de una, el cliente puede pedir cita con alguien en específico y cada quien lleva su propia agenda. Si lo dejas vacío, el asistente agenda como un solo lugar.</p>
+        <table class="serv">
+          <thead><tr><th>Nombre</th><th class="col-x"></th></tr></thead>
+          <tbody id="pers-body">
+            <?php if ($recursos): foreach ($recursos as $r): ?>
+              <tr>
+                <td data-label="Nombre"><input type="text" name="profesional_nombre[]" value="<?= htmlspecialchars((string)$r, ENT_QUOTES) ?>"></td>
+                <td class="col-x"><button type="button" class="btn-x" onclick="this.closest('tr').remove()">&times;</button></td>
+              </tr>
+            <?php endforeach; endif; ?>
+          </tbody>
+        </table>
+        <button type="button" class="btn btn--secundario" id="add-pers" style="margin-top:12px;"><i class="fas fa-plus"></i> Agregar persona</button>
+      </div>
+    </div>
+
     <div class="tab-panel" data-panel="reglas">
       <div class="seccion">
         <h2>Reglas adicionales del asistente (opcional)</h2>
@@ -268,6 +295,14 @@ layout_inicio('Configuración', 'negocio', 'config', ['negocio' => $negocio, 'cs
       '<td class="col-x"><button type="button" class="btn-x">&times;</button></td>';
     tr.querySelector('.btn-x').addEventListener('click', function () { tr.remove(); });
     document.getElementById('serv-body').appendChild(tr);
+  });
+  document.getElementById('add-pers').addEventListener('click', function () {
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td data-label="Nombre"><input type="text" name="profesional_nombre[]" placeholder="Nombre de la persona"></td>' +
+      '<td class="col-x"><button type="button" class="btn-x">&times;</button></td>';
+    tr.querySelector('.btn-x').addEventListener('click', function () { tr.remove(); });
+    document.getElementById('pers-body').appendChild(tr);
   });
 </script>
 <?php

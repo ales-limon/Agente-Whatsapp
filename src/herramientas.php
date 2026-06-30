@@ -15,11 +15,12 @@ function herramientas_disponibles(): array {
             'input_schema' => [
                 'type'       => 'object',
                 'properties' => [
-                    'nombre'   => ['type' => 'string', 'description' => 'Nombre completo del cliente (nombre y al menos un apellido)'],
-                    'servicio' => ['type' => 'string', 'description' => 'Servicio solicitado (tal cual aparece en la lista de servicios)'],
-                    'fecha'    => ['type' => 'string', 'description' => 'Fecha de la cita en formato YYYY-MM-DD'],
-                    'hora'     => ['type' => 'string', 'description' => 'Hora de inicio en formato de 24 horas HH:MM'],
-                    'dia'      => ['type' => 'string', 'description' => 'Dia de la cita tal como lo dijo el cliente, para mostrar (ej: martes 16 de junio)'],
+                    'nombre'      => ['type' => 'string', 'description' => 'Nombre completo del cliente (nombre y al menos un apellido)'],
+                    'servicio'    => ['type' => 'string', 'description' => 'Servicio solicitado (tal cual aparece en la lista de servicios)'],
+                    'fecha'       => ['type' => 'string', 'description' => 'Fecha de la cita en formato YYYY-MM-DD'],
+                    'hora'        => ['type' => 'string', 'description' => 'Hora de inicio en formato de 24 horas HH:MM'],
+                    'dia'         => ['type' => 'string', 'description' => 'Dia de la cita tal como lo dijo el cliente, para mostrar (ej: martes 16 de junio)'],
+                    'profesional' => ['type' => 'string', 'description' => 'OPCIONAL. Nombre de la persona que atendera (tal cual aparece en la lista de personal). Solo si el negocio tiene personal y el cliente prefiere a alguien. Si lo dejas vacio, el sistema asigna a quien este libre.'],
                 ],
                 'required' => ['nombre', 'servicio', 'fecha', 'hora'],
             ],
@@ -41,8 +42,9 @@ function herramientas_disponibles(): array {
             'input_schema' => [
                 'type'       => 'object',
                 'properties' => [
-                    'fecha'    => ['type' => 'string', 'description' => 'Fecha a consultar en formato YYYY-MM-DD'],
-                    'servicio' => ['type' => 'string', 'description' => 'Servicio que quiere el cliente (opcional, mejora el calculo segun su duracion)'],
+                    'fecha'       => ['type' => 'string', 'description' => 'Fecha a consultar en formato YYYY-MM-DD'],
+                    'servicio'    => ['type' => 'string', 'description' => 'Servicio que quiere el cliente (opcional, mejora el calculo segun su duracion)'],
+                    'profesional' => ['type' => 'string', 'description' => 'OPCIONAL. Si el cliente quiere ver la disponibilidad de una persona en especifico, su nombre (tal cual aparece en la lista de personal).'],
                 ],
                 'required' => ['fecha'],
             ],
@@ -127,18 +129,46 @@ function duracion_servicio(string $servicio, array $c): int {
     return $base > 0 ? $base : 30;
 }
 
-// Rangos [inicio, fin] (minutos) ocupados por citas no canceladas ese dia y negocio.
+// Rangos [inicio, fin, profesional] (minutos) ocupados por citas no canceladas
+// ese dia y negocio. El 3er elemento es el nombre de quien atiende ('' si ninguno).
 function rangos_ocupados(string $fecha, array $c, int $idNegocio): array {
-    $st = conexion()->prepare("SELECT servicio, hora, duracion FROM citas WHERE id_negocio = ? AND fecha = ? AND estado <> 'cancelada'");
+    $st = conexion()->prepare("SELECT servicio, hora, duracion, profesional FROM citas WHERE id_negocio = ? AND fecha = ? AND estado <> 'cancelada'");
     $st->execute([$idNegocio, $fecha]);
     $rangos = [];
     foreach ($st as $cita) {
         $ini = hhmm_a_min(normalizar_hora((string)($cita['hora'] ?? '')));
         $dur = (int)($cita['duracion'] ?? 0);
         if ($dur <= 0) $dur = duracion_servicio((string)($cita['servicio'] ?? ''), $c);
-        $rangos[] = [$ini, $ini + $dur];
+        $rangos[] = [$ini, $ini + $dur, (string)($cita['profesional'] ?? '')];
     }
     return $rangos;
+}
+
+// Filtra los rangos a los de una persona concreta. Si $prof es null, devuelve todos
+// (modo un-solo-lugar). Devuelve pares [ini, fin] listos para se_traslapa().
+function rangos_de_profesional(array $rangos, ?string $prof): array {
+    if ($prof === null) return array_map(fn($r) => [$r[0], $r[1]], $rangos);
+    $p = normalizar_nombre($prof);
+    $out = [];
+    foreach ($rangos as $r) {
+        if (normalizar_nombre((string)($r[2] ?? '')) === $p) $out[] = [$r[0], $r[1]];
+    }
+    return $out;
+}
+
+// Resuelve el nombre que dio el cliente contra la lista oficial de personal.
+// Devuelve el nombre canonico (tal cual esta en la config) o null si no coincide.
+function resolver_profesional(string $entrada, array $recursos): ?string {
+    $b = normalizar_nombre($entrada);
+    if ($b === '') return null;
+    foreach ($recursos as $r) {
+        if (normalizar_nombre((string)$r) === $b) return $r;
+    }
+    foreach ($recursos as $r) {
+        $n = normalizar_nombre((string)$r);
+        if ($n !== '' && (strpos($n, $b) !== false || strpos($b, $n) !== false)) return $r;
+    }
+    return null;
 }
 
 function se_traslapa(int $ini, int $fin, array $rangos): bool {
@@ -179,21 +209,51 @@ function registrar_cita(array $datos, ?string $contacto, int $idNegocio): string
         return 'NO REGISTRADA: el servicio "' . $servicio . '" dura ' . $dur . ' min y no cabe a esa hora (el negocio cierra a las ' . min_a_hhmm($cierra) . '). Ofrece una hora mas temprana u otro dia. Puedes usar consultar_disponibilidad.';
     }
 
-    if (se_traslapa($ini, $fin, rangos_ocupados($fecha, $c, $idNegocio))) {
-        return 'HORARIO OCUPADO: ese horario se encima con otra cita. Discúlpate y ofrece otro horario; usa consultar_disponibilidad para ver los libres. NO se registro nada.';
+    $recursos     = $c['recursos'] ?? [];
+    $rangos       = rangos_ocupados($fecha, $c, $idNegocio);
+    $profAsignado = null; // null = el negocio no maneja personal (un solo lugar)
+
+    if ($recursos) {
+        $profIn = trim((string)($datos['profesional'] ?? ''));
+        if ($profIn !== '') {
+            // El cliente pidio a alguien en especifico
+            $prof = resolver_profesional($profIn, $recursos);
+            if ($prof === null) {
+                return 'NO REGISTRADA: "' . $profIn . '" no esta en el personal del negocio. El personal es: ' . implode(', ', $recursos) . '. Confirma con el cliente con quien quiere, o deja que el sistema asigne a quien este libre.';
+            }
+            if (se_traslapa($ini, $fin, rangos_de_profesional($rangos, $prof))) {
+                return 'OCUPADO: ' . $prof . ' ya tiene una cita a esa hora. Ofrece al cliente otra hora con ' . $prof . ', u otra persona del personal. Usa consultar_disponibilidad. NO se registro nada.';
+            }
+            $profAsignado = $prof;
+        } else {
+            // Sin preferencia: asignar a la primera persona libre a esa hora
+            foreach ($recursos as $r) {
+                if (!se_traslapa($ini, $fin, rangos_de_profesional($rangos, $r))) { $profAsignado = $r; break; }
+            }
+            if ($profAsignado === null) {
+                return 'HORARIO OCUPADO: a esa hora todo el personal esta ocupado. Discúlpate y ofrece otro horario; usa consultar_disponibilidad. NO se registro nada.';
+            }
+        }
+    } else {
+        // Un solo lugar (comportamiento clasico)
+        if (se_traslapa($ini, $fin, rangos_de_profesional($rangos, null))) {
+            return 'HORARIO OCUPADO: ese horario se encima con otra cita. Discúlpate y ofrece otro horario; usa consultar_disponibilidad para ver los libres. NO se registro nada.';
+        }
     }
 
     $dia = trim((string)($datos['dia'] ?? ''));
     if ($dia === '') $dia = $fecha;
 
-    $st = conexion()->prepare("INSERT INTO citas (id_negocio, nombre, servicio, fecha, dia_texto, hora, duracion, contacto, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pendiente')");
-    $st->execute([$idNegocio, $nombre, $servicio, $fecha, $dia, $horaTxt, $dur, $contacto ?? 'desconocido']);
+    $st = conexion()->prepare("INSERT INTO citas (id_negocio, nombre, servicio, profesional, fecha, dia_texto, hora, duracion, contacto, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente')");
+    $st->execute([$idNegocio, $nombre, $servicio, $profAsignado, $fecha, $dia, $horaTxt, $dur, $contacto ?? 'desconocido']);
     $folio = (int)conexion()->lastInsertId();
 
     // Avisar al dueño por WhatsApp (si tiene número de avisos configurado).
-    avisar_cita_agendada($c, ['nombre' => $nombre, 'servicio' => $servicio, 'dia' => $dia, 'hora' => $horaTxt]);
+    avisar_cita_agendada($c, ['nombre' => $nombre, 'servicio' => $servicio, 'dia' => $dia, 'hora' => $horaTxt, 'profesional' => $profAsignado]);
 
-    return 'Cita registrada con folio #' . $folio . ' (' . $dur . ' min). Confirma al cliente que una persona del negocio se la confirmara por este medio.';
+    $conQuien = $profAsignado !== null ? ' con ' . $profAsignado : '';
+    return 'Cita registrada con folio #' . $folio . ' (' . $dur . ' min)' . $conQuien . '. Confirma al cliente que una persona del negocio se la confirmara por este medio'
+         . ($profAsignado !== null ? ', y mencionale que su cita es con ' . $profAsignado : '') . '.';
 }
 
 function consultar_cita(array $datos, ?string $contacto, int $idNegocio): string {
@@ -247,17 +307,40 @@ function consultar_disponibilidad(array $datos, ?string $contacto, int $idNegoci
     $hoy      = date('Y-m-d');
     $ahoraMin = ((int)date('G')) * 60 + (int)date('i');
 
+    // ¿Contra que agenda(s) medimos? Una persona concreta, cualquiera del personal,
+    // o el negocio como un solo lugar si no hay personal cargado.
+    $recursos = $c['recursos'] ?? [];
+    $profIn   = trim((string)($datos['profesional'] ?? ''));
+    $etqProf  = '';
+    if ($recursos) {
+        if ($profIn !== '') {
+            $prof = resolver_profesional($profIn, $recursos);
+            if ($prof === null) {
+                return '"' . $profIn . '" no esta en el personal. El personal es: ' . implode(', ', $recursos) . '. Pregunta al cliente con quien quiere, o consulta sin especificar persona.';
+            }
+            $agendas = [$prof];
+            $etqProf = ' con ' . $prof;
+        } else {
+            $agendas = $recursos; // libre si CUALQUIERA esta disponible
+        }
+    } else {
+        $agendas = [null]; // un solo lugar
+    }
+
     $libres = [];
     for ($m = $abre; $m + $dur <= $cierra; $m += $intervalo) {
         if ($fecha === $hoy && $m <= $ahoraMin) continue;
-        if (se_traslapa($m, $m + $dur, $rangos)) continue;
-        $libres[] = min_a_hhmm($m);
+        $hayAlguien = false;
+        foreach ($agendas as $p) {
+            if (!se_traslapa($m, $m + $dur, rangos_de_profesional($rangos, $p))) { $hayAlguien = true; break; }
+        }
+        if ($hayAlguien) $libres[] = min_a_hhmm($m);
     }
 
     if (!$libres) {
-        return 'El ' . $dia . ' ' . $fecha . ' no hay horarios libres' . ($servicio !== '' ? ' para ' . $servicio : '') . '. Ofrece al cliente otro dia.';
+        return 'El ' . $dia . ' ' . $fecha . ' no hay horarios libres' . $etqProf . ($servicio !== '' ? ' para ' . $servicio : '') . '. Ofrece al cliente otro dia' . ($etqProf !== '' ? ' u otra persona del personal' : '') . '.';
     }
-    return 'Horarios LIBRES el ' . $dia . ' ' . $fecha . ($servicio !== '' ? ' para ' . $servicio . ' (' . $dur . ' min)' : '') . ': ' . implode(', ', $libres) . '. Ofrece estos horarios al cliente.';
+    return 'Horarios LIBRES el ' . $dia . ' ' . $fecha . $etqProf . ($servicio !== '' ? ' para ' . $servicio . ' (' . $dur . ' min)' : '') . ': ' . implode(', ', $libres) . '. Ofrece estos horarios al cliente.';
 }
 
 function escalar_a_humano(array $datos, ?string $contacto, int $idNegocio): string {

@@ -48,6 +48,10 @@ if (!$colExiste('negocios', 'limite_mensajes_mes')) {
     $pdo->exec("ALTER TABLE negocios ADD COLUMN limite_mensajes_mes INT NOT NULL DEFAULT 0 AFTER numero_avisos");
     echo "Columna negocios.limite_mensajes_mes agregada.\n";
 }
+if (!$colExiste('citas', 'profesional')) {
+    $pdo->exec("ALTER TABLE citas ADD COLUMN profesional VARCHAR(120) NULL AFTER servicio");
+    echo "Columna citas.profesional agregada.\n";
+}
 
 // Backfill del enlace usuario-negocio desde la columna usuarios.id_negocio (idempotente).
 $pdo->exec("INSERT IGNORE INTO usuario_negocio (id_usuario, id_negocio)

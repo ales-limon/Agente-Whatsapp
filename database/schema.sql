@@ -47,11 +47,26 @@ CREATE TABLE IF NOT EXISTS servicios (
   FOREIGN KEY (id_negocio) REFERENCES negocios(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Personal que atiende (barberos, estilistas, especialistas...). Si un negocio
+-- tiene varias filas aqui, el cliente puede pedir cita con una persona en
+-- especifico y cada quien lleva su propia agenda. Sin filas = un solo lugar.
+CREATE TABLE IF NOT EXISTS recursos (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  id_negocio INT NOT NULL,
+  nombre VARCHAR(120) NOT NULL,
+  activo TINYINT(1) NOT NULL DEFAULT 1,
+  orden INT NOT NULL DEFAULT 0,
+  creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_negocio (id_negocio),
+  FOREIGN KEY (id_negocio) REFERENCES negocios(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS citas (
   id INT AUTO_INCREMENT PRIMARY KEY,
   id_negocio INT NOT NULL,
   nombre VARCHAR(160) NOT NULL,
   servicio VARCHAR(200) NULL,
+  profesional VARCHAR(120) NULL,
   fecha DATE NULL,
   dia_texto VARCHAR(120) NULL,
   hora VARCHAR(8) NULL,

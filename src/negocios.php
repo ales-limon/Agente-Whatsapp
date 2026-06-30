@@ -97,6 +97,15 @@ function guardar_configuracion(int $id, array $datos): void {
             $ss->execute([$id, $s['nombre'], (float)$s['precio'], (int)$s['duracion'], $orden]);
         }
 
+        // Personal que atiende. Se guarda como snapshot de nombres (la cita guarda
+        // el nombre como texto, no por FK), por eso podemos borrar y reinsertar.
+        $pdo->prepare("DELETE FROM recursos WHERE id_negocio = ?")->execute([$id]);
+        $sr = $pdo->prepare("INSERT INTO recursos (id_negocio, nombre, orden) VALUES (?, ?, ?)");
+        foreach (($datos['recursos'] ?? []) as $orden => $nombre) {
+            $nombre = trim((string)$nombre);
+            if ($nombre !== '') $sr->execute([$id, $nombre, $orden]);
+        }
+
         $pdo->commit();
     } catch (Throwable $e) {
         $pdo->rollBack();
