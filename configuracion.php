@@ -107,6 +107,16 @@ $css = '
   table.serv .col-pre { width: 120px; }
   table.serv .col-x { width: 36px; text-align: center; }
   .btn-x { border: 0; background: none; color: var(--error-texto); cursor: pointer; font-size: 18px; }
+  @media (max-width: 640px) {
+    table.serv thead { display: none; }
+    table.serv, table.serv tbody, table.serv tr, table.serv td { display: block; width: 100%; }
+    table.serv tr { border: 1px solid var(--borde); border-radius: var(--radio); padding: 12px; margin-bottom: 12px; position: relative; }
+    table.serv td { padding: 6px 0; }
+    table.serv .col-pre, table.serv .col-dur { width: 100%; }
+    table.serv td::before { content: attr(data-label); display: block; font-size: 12px; color: var(--texto-2); font-weight: 600; margin-bottom: 4px; }
+    table.serv .col-x { position: absolute; top: 6px; right: 6px; width: auto; padding: 0; }
+    table.serv .col-x::before { content: none; }
+  }
   .hint { font-size: 12px; color: var(--texto-2); margin-top: 5px; }
 ';
 layout_inicio('Configuración', 'negocio', 'config', ['negocio' => $negocio, 'css' => $css]);
@@ -186,9 +196,9 @@ layout_inicio('Configuración', 'negocio', 'config', ['negocio' => $negocio, 'cs
           <tbody id="serv-body">
             <?php if ($servicios): foreach ($servicios as $s): ?>
               <tr>
-                <td><input type="text" name="servicio_nombre[]" value="<?= htmlspecialchars((string)($s['nombre'] ?? ''), ENT_QUOTES) ?>"></td>
-                <td class="col-pre"><input type="text" name="servicio_precio[]" value="<?= htmlspecialchars((string)($s['precio'] ?? ''), ENT_QUOTES) ?>"></td>
-                <td class="col-dur"><input type="number" name="servicio_duracion[]" min="5" step="5" value="<?= (int)($s['duracion'] ?? 30) ?>"></td>
+                <td data-label="Servicio"><input type="text" name="servicio_nombre[]" value="<?= htmlspecialchars((string)($s['nombre'] ?? ''), ENT_QUOTES) ?>"></td>
+                <td class="col-pre" data-label="Precio"><input type="text" name="servicio_precio[]" value="<?= htmlspecialchars((string)($s['precio'] ?? ''), ENT_QUOTES) ?>"></td>
+                <td class="col-dur" data-label="Duración (min)"><input type="number" name="servicio_duracion[]" min="5" step="5" value="<?= (int)($s['duracion'] ?? 30) ?>"></td>
                 <td class="col-x"><button type="button" class="btn-x" onclick="this.closest('tr').remove()">&times;</button></td>
               </tr>
             <?php endforeach; endif; ?>
@@ -252,9 +262,9 @@ layout_inicio('Configuración', 'negocio', 'config', ['negocio' => $negocio, 'cs
   document.getElementById('add-serv').addEventListener('click', function () {
     var tr = document.createElement('tr');
     tr.innerHTML =
-      '<td><input type="text" name="servicio_nombre[]" placeholder="Nombre del servicio"></td>' +
-      '<td class="col-pre"><input type="text" name="servicio_precio[]" placeholder="0"></td>' +
-      '<td class="col-dur"><input type="number" name="servicio_duracion[]" min="5" step="5" value="30"></td>' +
+      '<td data-label="Servicio"><input type="text" name="servicio_nombre[]" placeholder="Nombre del servicio"></td>' +
+      '<td class="col-pre" data-label="Precio"><input type="text" name="servicio_precio[]" placeholder="0"></td>' +
+      '<td class="col-dur" data-label="Duración (min)"><input type="number" name="servicio_duracion[]" min="5" step="5" value="30"></td>' +
       '<td class="col-x"><button type="button" class="btn-x">&times;</button></td>';
     tr.querySelector('.btn-x').addEventListener('click', function () { tr.remove(); });
     document.getElementById('serv-body').appendChild(tr);
