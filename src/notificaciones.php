@@ -135,3 +135,40 @@ function avisar_cita_agendada(array $c, array $cita): void {
         error_log('avisar_cita_agendada: ' . $e->getMessage());
     }
 }
+
+// Avisa al dueño que una cita fue CANCELADA por el cliente. Best-effort (mensaje libre,
+// entrega dentro de la ventana de 24h). El panel es la fuente de verdad.
+function avisar_cita_cancelada(array $c, array $cita): void {
+    $para  = trim((string)($c['numero_avisos'] ?? ''));
+    $desde = trim((string)($c['numero_whatsapp'] ?? ''));
+    if ($para === '' || $desde === '') return;
+
+    $mensaje = "Cita CANCELADA en {$c['negocio']}:\n"
+             . "Cliente: {$cita['nombre']}\n"
+             . "Era: {$cita['servicio']} el {$cita['dia_texto']} a las {$cita['hora']}";
+    try {
+        enviar_whatsapp($para, $mensaje, $desde);
+    } catch (Throwable $e) {
+        error_log('avisar_cita_cancelada: ' . $e->getMessage());
+    }
+}
+
+// Avisa al dueño que una cita fue REAGENDADA por el cliente. $nuevo = ['dia','hora','profesional'].
+function avisar_cita_reagendada(array $c, array $citaAntes, array $nuevo): void {
+    $para  = trim((string)($c['numero_avisos'] ?? ''));
+    $desde = trim((string)($c['numero_whatsapp'] ?? ''));
+    if ($para === '' || $desde === '') return;
+
+    $prof    = trim((string)($nuevo['profesional'] ?? ''));
+    $mensaje = "Cita REAGENDADA en {$c['negocio']}:\n"
+             . "Cliente: {$citaAntes['nombre']}\n"
+             . "Servicio: {$citaAntes['servicio']}\n"
+             . "Antes: {$citaAntes['dia_texto']} a las {$citaAntes['hora']}\n"
+             . "Ahora: {$nuevo['dia']} a las {$nuevo['hora']}"
+             . ($prof !== '' ? "\nCon: {$prof}" : '');
+    try {
+        enviar_whatsapp($para, $mensaje, $desde);
+    } catch (Throwable $e) {
+        error_log('avisar_cita_reagendada: ' . $e->getMessage());
+    }
+}

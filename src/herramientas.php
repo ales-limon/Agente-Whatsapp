@@ -50,6 +50,34 @@ function herramientas_disponibles(): array {
             ],
         ],
         [
+            'name'        => 'cancelar_cita',
+            'description' => 'Cancela una cita existente del cliente. ANTES de llamarla pide el nombre completo para verificar identidad. Si el cliente tiene mas de una cita activa y no queda claro cual, usa consultar_cita para ver los folios y pregunta cual quiere cancelar (por folio).',
+            'input_schema' => [
+                'type'       => 'object',
+                'properties' => [
+                    'nombre' => ['type' => 'string', 'description' => 'Nombre completo con el que el cliente agendo (para verificar identidad)'],
+                    'folio'  => ['type' => 'integer', 'description' => 'OPCIONAL. Numero de folio de la cita a cancelar. Usalo cuando el cliente tenga varias citas o para no equivocarte.'],
+                ],
+                'required' => ['nombre'],
+            ],
+        ],
+        [
+            'name'        => 'reagendar_cita',
+            'description' => 'Cambia la fecha y/u hora de una cita existente del cliente. ANTES de llamarla pide el nombre completo para verificar identidad, y la nueva fecha/hora que quiere. Si el cliente tiene varias citas activas y no queda claro cual, usa consultar_cita y pregunta cual (por folio). Conserva el mismo servicio y la misma persona que atiende, salvo que el cliente pida cambiarlos.',
+            'input_schema' => [
+                'type'       => 'object',
+                'properties' => [
+                    'nombre'      => ['type' => 'string', 'description' => 'Nombre completo con el que el cliente agendo (para verificar identidad)'],
+                    'fecha'       => ['type' => 'string', 'description' => 'NUEVA fecha en formato YYYY-MM-DD'],
+                    'hora'        => ['type' => 'string', 'description' => 'NUEVA hora de inicio en formato de 24 horas HH:MM'],
+                    'dia'         => ['type' => 'string', 'description' => 'Nuevo dia tal como lo dijo el cliente, para mostrar (ej: martes 16 de junio)'],
+                    'folio'       => ['type' => 'integer', 'description' => 'OPCIONAL. Numero de folio de la cita a mover. Usalo cuando el cliente tenga varias citas o para no equivocarte.'],
+                    'profesional' => ['type' => 'string', 'description' => 'OPCIONAL. Solo si el cliente quiere cambiar de persona que atiende. Si no lo pasas, se conserva la persona original.'],
+                ],
+                'required' => ['nombre', 'fecha', 'hora'],
+            ],
+        ],
+        [
             'name'        => 'escalar_a_humano',
             'description' => 'Pasa la conversacion a una persona del negocio. Usala cuando el cliente pida explicitamente hablar con una persona/humano, o cuando no puedas resolver lo que necesita con la informacion y herramientas disponibles. Al llamarla, el negocio recibe un aviso y tu DEJAS de atender a este cliente hasta que una persona lo retome. Despues de llamarla, avisa al cliente con calidez que en breve lo contactara una persona del negocio.',
             'input_schema' => [
@@ -68,6 +96,8 @@ function ejecutar_herramienta(string $nombre, array $input, ?string $contacto, i
         case 'registrar_cita':           return registrar_cita($input, $contacto, $idNegocio);
         case 'consultar_cita':           return consultar_cita($input, $contacto, $idNegocio);
         case 'consultar_disponibilidad': return consultar_disponibilidad($input, $contacto, $idNegocio);
+        case 'cancelar_cita':            return cancelar_cita($input, $contacto, $idNegocio);
+        case 'reagendar_cita':           return reagendar_cita($input, $contacto, $idNegocio);
         case 'escalar_a_humano':         return escalar_a_humano($input, $contacto, $idNegocio);
         default:                         return 'Herramienta no reconocida.';
     }
@@ -131,9 +161,12 @@ function duracion_servicio(string $servicio, array $c): int {
 
 // Rangos [inicio, fin, profesional] (minutos) ocupados por citas no canceladas
 // ese dia y negocio. El 3er elemento es el nombre de quien atiende ('' si ninguno).
-function rangos_ocupados(string $fecha, array $c, int $idNegocio): array {
-    $st = conexion()->prepare("SELECT servicio, hora, duracion, profesional FROM citas WHERE id_negocio = ? AND fecha = ? AND estado <> 'cancelada'");
-    $st->execute([$idNegocio, $fecha]);
+function rangos_ocupados(string $fecha, array $c, int $idNegocio, ?int $excluir = null): array {
+    $sql    = "SELECT servicio, hora, duracion, profesional FROM citas WHERE id_negocio = ? AND fecha = ? AND estado <> 'cancelada'";
+    $params = [$idNegocio, $fecha];
+    if ($excluir !== null) { $sql .= " AND id <> ?"; $params[] = $excluir; }
+    $st = conexion()->prepare($sql);
+    $st->execute($params);
     $rangos = [];
     foreach ($st as $cita) {
         $ini = hhmm_a_min(normalizar_hora((string)($cita['hora'] ?? '')));
@@ -282,6 +315,138 @@ function consultar_cita(array $datos, ?string $contacto, int $idNegocio): string
         $texto .= "\n- Folio #{$c['id']}: {$c['servicio']} el {$c['dia_texto']} a las {$c['hora']} (estado: {$c['estado']})";
     }
     return $texto;
+}
+
+// Busca las citas ACTIVAS (no canceladas) de un cliente por nombre, en este negocio.
+// Emparejamiento ESTRICTO por tokens: TODAS las palabras que dio el cliente deben
+// aparecer como palabra en el nombre guardado. Al ser cancelar/reagendar operaciones
+// destructivas, no usamos el match laxo por substring de consultar_cita (que podria
+// tocar la cita de otro cliente). Si hay ambiguedad, elegir_cita pide desambiguar.
+function buscar_citas_cliente(string $nombre, int $idNegocio): array {
+    $qTokens = array_values(array_filter(explode(' ', normalizar_nombre($nombre))));
+    if (!$qTokens) return [];
+    $st = conexion()->prepare("SELECT * FROM citas WHERE id_negocio = ? AND estado <> 'cancelada' ORDER BY fecha, hora");
+    $st->execute([$idNegocio]);
+    $out = [];
+    foreach ($st as $c) {
+        $sTokens = array_filter(explode(' ', normalizar_nombre((string)($c['nombre'] ?? ''))));
+        $todos = true;
+        foreach ($qTokens as $qt) {
+            if (!in_array($qt, $sTokens, true)) { $todos = false; break; }
+        }
+        if ($todos) $out[] = $c;
+    }
+    return $out;
+}
+
+// Resuelve a que cita se refiere el cliente: por folio si lo dio, o la unica activa.
+// Devuelve ['cita'=>fila] si hay una clara, o ['mensaje'=>texto] para que el agente pregunte/avise.
+function elegir_cita(array $datos, string $nombre, int $idNegocio, string $verbo): array {
+    if (count(preg_split('/\s+/', normalizar_nombre($nombre), -1, PREG_SPLIT_NO_EMPTY)) < 2) {
+        return ['mensaje' => 'Pide el nombre completo (nombre y al menos un apellido) para verificar identidad antes de ' . $verbo . '.'];
+    }
+    $citas = buscar_citas_cliente($nombre, $idNegocio);
+    if (!$citas) {
+        return ['mensaje' => 'No se encontro ninguna cita activa a nombre de "' . $nombre . '". Verifica el nombre completo con el que agendo. NO se hizo ningun cambio.'];
+    }
+    $folio = isset($datos['folio']) ? (int)$datos['folio'] : 0;
+    if ($folio > 0) {
+        foreach ($citas as $c) if ((int)$c['id'] === $folio) return ['cita' => $c];
+        return ['mensaje' => 'El folio #' . $folio . ' no corresponde a una cita activa de "' . $nombre . '". NO se hizo ningun cambio. Confirma el folio con consultar_cita.'];
+    }
+    if (count($citas) === 1) return ['cita' => $citas[0]];
+    $txt = 'El cliente tiene varias citas activas. Pregunta cual quiere (por folio) antes de ' . $verbo . ':';
+    foreach ($citas as $c) $txt .= "\n- Folio #{$c['id']}: {$c['servicio']} el {$c['dia_texto']} a las {$c['hora']}";
+    return ['mensaje' => $txt . "\nNO se ha hecho nada todavia."];
+}
+
+function cancelar_cita(array $datos, ?string $contacto, int $idNegocio): string {
+    $nombre = trim((string)($datos['nombre'] ?? ''));
+    $sel = elegir_cita($datos, $nombre, $idNegocio, 'cancelar');
+    if (isset($sel['mensaje'])) return $sel['mensaje'];
+    $cita = $sel['cita'];
+
+    conexion()->prepare("UPDATE citas SET estado = 'cancelada' WHERE id = ? AND id_negocio = ?")
+        ->execute([(int)$cita['id'], $idNegocio]);
+
+    $c = cargar_conocimiento($idNegocio);
+    avisar_cita_cancelada($c, $cita);
+
+    return 'Cita #' . (int)$cita['id'] . ' (' . $cita['servicio'] . ' el ' . $cita['dia_texto'] . ' a las ' . $cita['hora'] . ') CANCELADA. Confirma al cliente con calidez que su cita quedo cancelada y ofrece agendar otra cuando guste.';
+}
+
+function reagendar_cita(array $datos, ?string $contacto, int $idNegocio): string {
+    $nombre  = trim((string)($datos['nombre'] ?? ''));
+    $fecha   = trim((string)($datos['fecha'] ?? ''));
+    $horaTxt = trim((string)($datos['hora'] ?? ''));
+    $hora    = normalizar_hora($horaTxt);
+    if ($fecha === '' || $hora === '') {
+        return 'Falta la nueva fecha o la nueva hora. Pideselas al cliente antes de reagendar.';
+    }
+
+    $sel = elegir_cita($datos, $nombre, $idNegocio, 'reagendar');
+    if (isset($sel['mensaje'])) return $sel['mensaje'];
+    $cita = $sel['cita'];
+
+    $c   = cargar_conocimiento($idNegocio);
+    $hor = horario_del_dia($fecha, $c);
+    if ($hor === null) {
+        return 'NO MOVIDA: la fecha ' . $fecha . ' cae en ' . (nombre_dia($fecha) ?? 'dia desconocido') . ' y el negocio NO abre ese dia. Verifica en la tabla de proximos dias y ofrece un dia abierto.';
+    }
+    [$abre, $cierra] = $hor;
+
+    $dur = (int)($cita['duracion'] ?? 0);
+    if ($dur <= 0) $dur = duracion_servicio((string)($cita['servicio'] ?? ''), $c);
+    $ini = hhmm_a_min($hora);
+    $fin = $ini + $dur;
+    if ($ini < $abre || $fin > $cierra) {
+        return 'NO MOVIDA: el servicio dura ' . $dur . ' min y no cabe a esa hora (el negocio cierra a las ' . min_a_hhmm($cierra) . '). Ofrece otra hora. Puedes usar consultar_disponibilidad.';
+    }
+
+    // Persona que atiende: se conserva la original salvo que el cliente pida cambiarla.
+    $recursos = $c['recursos'] ?? [];
+    $prof     = (string)($cita['profesional'] ?? '');
+    $profIn   = trim((string)($datos['profesional'] ?? ''));
+    if ($recursos && $profIn !== '') {
+        $resuelto = resolver_profesional($profIn, $recursos);
+        if ($resuelto === null) {
+            return 'NO MOVIDA: "' . $profIn . '" no esta en el personal (' . implode(', ', $recursos) . '). Confirma con quien quiere.';
+        }
+        $prof = $resuelto;
+    }
+
+    // Disponibilidad en el nuevo horario, EXCLUYENDO la propia cita (si no, choca consigo misma).
+    $rangos = rangos_ocupados($fecha, $c, $idNegocio, (int)$cita['id']);
+    if ($recursos) {
+        if ($prof !== '') {
+            if (se_traslapa($ini, $fin, rangos_de_profesional($rangos, $prof))) {
+                return 'OCUPADO: ' . $prof . ' ya tiene una cita a esa hora. Ofrece otra hora con ' . $prof . ', u otra persona del personal. NO se movio nada.';
+            }
+        } else {
+            // La cita no tenia persona asignada: asignar a la primera libre.
+            foreach ($recursos as $r) {
+                if (!se_traslapa($ini, $fin, rangos_de_profesional($rangos, $r))) { $prof = $r; break; }
+            }
+            if ($prof === '') {
+                return 'HORARIO OCUPADO: a esa hora todo el personal esta ocupado. Ofrece otro horario. NO se movio nada.';
+            }
+        }
+    } else {
+        if (se_traslapa($ini, $fin, rangos_de_profesional($rangos, null))) {
+            return 'HORARIO OCUPADO: ese horario se encima con otra cita. Ofrece otro horario. NO se movio nada.';
+        }
+    }
+
+    $dia = trim((string)($datos['dia'] ?? ''));
+    if ($dia === '') $dia = $fecha;
+
+    conexion()->prepare("UPDATE citas SET fecha = ?, dia_texto = ?, hora = ?, duracion = ?, profesional = ?, estado = 'pendiente' WHERE id = ? AND id_negocio = ?")
+        ->execute([$fecha, $dia, $horaTxt, $dur, ($prof !== '' ? $prof : null), (int)$cita['id'], $idNegocio]);
+
+    avisar_cita_reagendada($c, $cita, ['dia' => $dia, 'hora' => $horaTxt, 'profesional' => $prof]);
+
+    $conQuien = ($prof !== '') ? ' con ' . $prof : '';
+    return 'Cita #' . (int)$cita['id'] . ' reagendada al ' . $dia . ' a las ' . $horaTxt . $conQuien . '. Confirma al cliente con calidez el nuevo dia y hora' . ($prof !== '' ? ' y con quien queda' : '') . '.';
 }
 
 function consultar_disponibilidad(array $datos, ?string $contacto, int $idNegocio): string {
