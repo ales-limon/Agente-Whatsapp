@@ -29,9 +29,10 @@ function layout_inicio(string $titulo, string $contexto, string $activo, array $
         ];
     } else {
         $items = [
-            ['citas',  "panel.php?t=$slug",         'fa-calendar-check', 'Citas'],
-            ['config', "configuracion.php?t=$slug", 'fa-sliders',        'Configuración'],
-            ['chat',   "chat.php?t=$slug",          'fa-comment-dots',   'Probar chat'],
+            ['citas',  "panel.php?t=$slug",          'fa-calendar-check', 'Citas'],
+            ['agenda', "agenda.php?t=$slug",         'fa-calendar-days',  'Agenda'],
+            ['config', "configuracion.php?t=$slug",  'fa-sliders',        'Configuración'],
+            ['chat',   "chat.php?t=$slug",           'fa-comment-dots',   'Probar chat'],
         ];
     }
     // Cuántos chats están esperando atención humana (para el contador en "Citas").
