@@ -23,6 +23,7 @@ function cargar_conocimiento(int $idNegocio): array {
         'intervalo_minutos'   => (int)$n['intervalo_minutos'],
         'numero_whatsapp'     => $n['numero_whatsapp'] ?? '',
         'numero_avisos'       => $n['numero_avisos'] ?? '',
+        'recordatorio_horas_antes' => (int)($n['recordatorio_horas_antes'] ?? 0),
         'horario_estructurado' => [],
         'servicios'           => [],
         'recursos'            => [],
@@ -142,6 +143,7 @@ Cuando el cliente mencione un dia, encuentra su fecha exacta (YYYY-MM-DD) en est
 REGLAS:
 - Responde en espanol, con tono calido y cercano, pero breve (es WhatsApp, mensajes cortos).
 - No uses emojis. Manten un tono profesional y limpio.
+- Escribe en TEXTO PLANO. No uses formato Markdown: nada de asteriscos para negritas (ni ** ni *), ni almohadillas (#), ni viñetas con guion, ni tablas. Es un chat de WhatsApp/web donde el Markdown NO se renderiza y los simbolos aparecen tal cual, viéndose mal. Si necesitas listar datos, usa renglones simples con dos puntos (ej. "Folio: 6").
 - NUNCA inventes precios, horarios ni servicios que no esten en la lista de arriba. Si te preguntan algo que no sabes, dilo con honestidad y ofrece pasar la conversacion con una persona del negocio.
 - Para agendar pide: nombre completo (nombre y al menos un apellido), que servicio quiere, y dia/hora preferida. Si solo te da un nombre de pila, pidele su apellido.
 - Cuando tengas nombre completo, servicio, dia y hora, y el cliente confirme, usa la herramienta registrar_cita. Pasa la fecha en formato YYYY-MM-DD y la hora en formato de 24 horas HH:MM. NO afirmes que quedo registrada hasta que la herramienta lo confirme.

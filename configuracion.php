@@ -35,6 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'politicas'           => trim($_POST['politicas'] ?? ''),
         'instrucciones_extra' => trim($_POST['instrucciones_extra'] ?? ''),
         'intervalo_minutos'   => max(5, (int)($_POST['intervalo_minutos'] ?? 30)),
+        'recordatorio_horas_antes' => max(0, (int)($_POST['recordatorio_horas_antes'] ?? 0)),
         'horario_estructurado' => [],
         'servicios'           => [],
     ];
@@ -164,6 +165,11 @@ layout_inicio('Configuración', 'negocio', 'config', ['negocio' => $negocio, 'cs
           <label>Número para recibir avisos de citas (tu WhatsApp)</label>
           <input type="text" name="numero_avisos" value="<?= val($c, 'numero_avisos') ?>" placeholder="+5213334588268">
           <div class="hint">Cuando se agende una cita, te llega un aviso por WhatsApp aquí. Usa formato internacional, ej. +52...</div>
+        </div>
+        <div class="grupo">
+          <label>Recordatorio automático al cliente (horas antes)</label>
+          <input type="number" name="recordatorio_horas_antes" min="0" step="1" value="<?= (int)($c['recordatorio_horas_antes'] ?? 0) ?>" style="width:120px;">
+          <div class="hint">Cuántas horas antes de su cita se le recuerda al cliente por WhatsApp. 0 = desactivado. Ej: 24 = un día antes. Solo aplica a clientes que agendaron por WhatsApp.</div>
         </div>
       </div>
     </div>

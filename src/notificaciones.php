@@ -136,16 +136,34 @@ function avisar_cita_agendada(array $c, array $cita): void {
     }
 }
 
-// Avisa al dueño que una cita fue CANCELADA por el cliente. Best-effort (mensaje libre,
-// entrega dentro de la ventana de 24h). El panel es la fuente de verdad.
+// Avisa al dueño que una cita fue CANCELADA por el cliente. Usa plantilla aprobada
+// (llega aunque el dueño no haya escrito en 24h) con respaldo a mensaje libre.
 function avisar_cita_cancelada(array $c, array $cita): void {
+    cargar_entorno();
     $para  = trim((string)($c['numero_avisos'] ?? ''));
     $desde = trim((string)($c['numero_whatsapp'] ?? ''));
     if ($para === '' || $desde === '') return;
 
+    $cuando = trim((string)($cita['dia_texto'] ?? '') . ' a las ' . (string)($cita['hora'] ?? ''));
+
+    $contentSid = trim((string) env('TWILIO_PLANTILLA_CANCELADA', ''));
+    if ($contentSid !== '') {
+        try {
+            $r = enviar_whatsapp_plantilla($para, $desde, $contentSid, [
+                '1' => (string)($c['negocio'] ?? ''),
+                '2' => (string)($cita['nombre'] ?? ''),
+                '3' => (string)($cita['servicio'] ?? ''),
+                '4' => $cuando,
+            ]);
+            if (!empty($r['exito'])) return;
+        } catch (Throwable $e) {
+            error_log('avisar_cita_cancelada (plantilla): ' . $e->getMessage());
+        }
+    }
+
     $mensaje = "Cita CANCELADA en {$c['negocio']}:\n"
              . "Cliente: {$cita['nombre']}\n"
-             . "Era: {$cita['servicio']} el {$cita['dia_texto']} a las {$cita['hora']}";
+             . "Era: {$cita['servicio']} el {$cuando}";
     try {
         enviar_whatsapp($para, $mensaje, $desde);
     } catch (Throwable $e) {
@@ -154,21 +172,85 @@ function avisar_cita_cancelada(array $c, array $cita): void {
 }
 
 // Avisa al dueño que una cita fue REAGENDADA por el cliente. $nuevo = ['dia','hora','profesional'].
+// Usa plantilla aprobada con respaldo a mensaje libre.
 function avisar_cita_reagendada(array $c, array $citaAntes, array $nuevo): void {
+    cargar_entorno();
     $para  = trim((string)($c['numero_avisos'] ?? ''));
     $desde = trim((string)($c['numero_whatsapp'] ?? ''));
     if ($para === '' || $desde === '') return;
 
-    $prof    = trim((string)($nuevo['profesional'] ?? ''));
+    $antes = trim((string)($citaAntes['dia_texto'] ?? '') . ' a las ' . (string)($citaAntes['hora'] ?? ''));
+    $prof  = trim((string)($nuevo['profesional'] ?? ''));
+    $ahora = trim((string)($nuevo['dia'] ?? '') . ' a las ' . (string)($nuevo['hora'] ?? '')) . ($prof !== '' ? ' con ' . $prof : '');
+
+    $contentSid = trim((string) env('TWILIO_PLANTILLA_REAGENDADA', ''));
+    if ($contentSid !== '') {
+        try {
+            $r = enviar_whatsapp_plantilla($para, $desde, $contentSid, [
+                '1' => (string)($c['negocio'] ?? ''),
+                '2' => (string)($citaAntes['nombre'] ?? ''),
+                '3' => (string)($citaAntes['servicio'] ?? ''),
+                '4' => $antes,
+                '5' => $ahora,
+            ]);
+            if (!empty($r['exito'])) return;
+        } catch (Throwable $e) {
+            error_log('avisar_cita_reagendada (plantilla): ' . $e->getMessage());
+        }
+    }
+
     $mensaje = "Cita REAGENDADA en {$c['negocio']}:\n"
              . "Cliente: {$citaAntes['nombre']}\n"
              . "Servicio: {$citaAntes['servicio']}\n"
-             . "Antes: {$citaAntes['dia_texto']} a las {$citaAntes['hora']}\n"
-             . "Ahora: {$nuevo['dia']} a las {$nuevo['hora']}"
-             . ($prof !== '' ? "\nCon: {$prof}" : '');
+             . "Antes: {$antes}\n"
+             . "Ahora: {$ahora}";
     try {
         enviar_whatsapp($para, $mensaje, $desde);
     } catch (Throwable $e) {
         error_log('avisar_cita_reagendada: ' . $e->getMessage());
+    }
+}
+
+// Recordatorio al CLIENTE de su proxima cita (lo dispara recordatorios.php via cron).
+// El destinatario es el numero del cliente (cita.contacto); el remitente, el WhatsApp del negocio.
+// Necesita plantilla aprobada (el cliente no escribio en 24h). Devuelve true si se entrego.
+function avisar_recordatorio_cliente(array $c, array $cita): bool {
+    cargar_entorno();
+    $desde = trim((string)($c['numero_whatsapp'] ?? ''));
+    $para  = trim((string)($cita['contacto'] ?? ''));
+    if ($desde === '' || $para === '') return false;
+
+    $cuando = trim((string)($cita['dia_texto'] ?? ''));
+    if ($cuando === '') $cuando = trim((string)($cita['fecha'] ?? '') . ' ' . (string)($cita['hora'] ?? ''));
+    else                $cuando .= ' a las ' . (string)($cita['hora'] ?? '');
+    $prof = trim((string)($cita['profesional'] ?? ''));
+    if ($prof !== '') $cuando .= ' con ' . $prof;
+
+    $contentSid = trim((string) env('TWILIO_PLANTILLA_RECORDATORIO', ''));
+    if ($contentSid !== '') {
+        try {
+            $r = enviar_whatsapp_plantilla($para, $desde, $contentSid, [
+                '1' => (string)($cita['nombre'] ?? ''),
+                '2' => (string)($c['negocio'] ?? ''),
+                '3' => (string)($cita['servicio'] ?? ''),
+                '4' => $cuando,
+            ]);
+            if (!empty($r['exito'])) return true;
+        } catch (Throwable $e) {
+            error_log('avisar_recordatorio_cliente (plantilla): ' . $e->getMessage());
+        }
+    }
+
+    // Respaldo: mensaje libre (solo entrega si el cliente escribio en las ultimas 24h).
+    $mensaje = "Hola, te recordamos tu cita en {$c['negocio']}.\n"
+             . "Servicio: {$cita['servicio']}\n"
+             . "Cuando: {$cuando}\n"
+             . "Si necesitas cambiarla o cancelarla, respondenos por este medio.";
+    try {
+        $r = enviar_whatsapp($para, $mensaje, $desde);
+        return !empty($r['exito']);
+    } catch (Throwable $e) {
+        error_log('avisar_recordatorio_cliente (libre): ' . $e->getMessage());
+        return false;
     }
 }

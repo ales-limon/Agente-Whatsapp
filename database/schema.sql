@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS negocios (
   numero_whatsapp VARCHAR(40) NULL UNIQUE,
   numero_avisos VARCHAR(40) NULL,
   limite_mensajes_mes INT NOT NULL DEFAULT 0,
+  recordatorio_horas_antes INT NOT NULL DEFAULT 0,
   activo TINYINT(1) NOT NULL DEFAULT 1,
   creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -73,6 +74,7 @@ CREATE TABLE IF NOT EXISTS citas (
   duracion INT NOT NULL DEFAULT 30,
   contacto VARCHAR(80) NULL,
   estado VARCHAR(20) NOT NULL DEFAULT 'pendiente',
+  recordado_en DATETIME NULL,
   creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   KEY idx_negocio_fecha (id_negocio, fecha),
   FOREIGN KEY (id_negocio) REFERENCES negocios(id) ON DELETE CASCADE

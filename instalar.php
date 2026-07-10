@@ -52,6 +52,14 @@ if (!$colExiste('citas', 'profesional')) {
     $pdo->exec("ALTER TABLE citas ADD COLUMN profesional VARCHAR(120) NULL AFTER servicio");
     echo "Columna citas.profesional agregada.\n";
 }
+if (!$colExiste('citas', 'recordado_en')) {
+    $pdo->exec("ALTER TABLE citas ADD COLUMN recordado_en DATETIME NULL AFTER estado");
+    echo "Columna citas.recordado_en agregada.\n";
+}
+if (!$colExiste('negocios', 'recordatorio_horas_antes')) {
+    $pdo->exec("ALTER TABLE negocios ADD COLUMN recordatorio_horas_antes INT NOT NULL DEFAULT 0 AFTER limite_mensajes_mes");
+    echo "Columna negocios.recordatorio_horas_antes agregada.\n";
+}
 
 // Backfill del enlace usuario-negocio desde la columna usuarios.id_negocio (idempotente).
 $pdo->exec("INSERT IGNORE INTO usuario_negocio (id_usuario, id_negocio)

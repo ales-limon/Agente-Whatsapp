@@ -73,11 +73,12 @@ function guardar_configuracion(int $id, array $datos): void {
     $pdo = conexion();
     $pdo->beginTransaction();
     try {
-        $st = $pdo->prepare("UPDATE negocios SET nombre=?, descripcion=?, ubicacion=?, telefono=?, politicas=?, instrucciones_extra=?, intervalo_minutos=?, numero_avisos=? WHERE id=?");
+        $st = $pdo->prepare("UPDATE negocios SET nombre=?, descripcion=?, ubicacion=?, telefono=?, politicas=?, instrucciones_extra=?, intervalo_minutos=?, numero_avisos=?, recordatorio_horas_antes=? WHERE id=?");
         $st->execute([
             $datos['negocio'], $datos['descripcion'], $datos['ubicacion'], $datos['telefono'],
             $datos['politicas'], $datos['instrucciones_extra'], $datos['intervalo_minutos'],
             ($datos['numero_avisos'] ?? '') !== '' ? normalizar_numero($datos['numero_avisos']) : null,
+            max(0, (int)($datos['recordatorio_horas_antes'] ?? 0)),
             $id,
         ]);
 
