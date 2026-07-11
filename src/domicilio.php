@@ -17,14 +17,16 @@ function dias_semana(): array {
 // ---------- Zonas ----------
 
 function listar_zonas(int $idNegocio): array {
-    $st = conexion()->prepare("SELECT id, nombre, dias FROM zonas WHERE id_negocio = ? ORDER BY orden, id");
+    $st = conexion()->prepare("SELECT id, nombre, dias, colonias FROM zonas WHERE id_negocio = ? ORDER BY orden, id");
     $st->execute([$idNegocio]);
     $out = [];
     foreach ($st as $z) {
+        $cols = json_decode((string)($z['colonias'] ?? ''), true);
         $out[] = [
-            'id'     => (int)$z['id'],
-            'nombre' => (string)$z['nombre'],
-            'dias'   => array_values(array_filter(array_map('trim', explode(',', (string)$z['dias'])))),
+            'id'       => (int)$z['id'],
+            'nombre'   => (string)$z['nombre'],
+            'dias'     => array_values(array_filter(array_map('trim', explode(',', (string)$z['dias'])))),
+            'colonias' => is_array($cols) ? $cols : [],
         ];
     }
     return $out;
@@ -38,12 +40,13 @@ function guardar_zonas(int $idNegocio, array $zonas): void {
     $pdo->beginTransaction();
     try {
         $pdo->prepare("DELETE FROM zonas WHERE id_negocio = ?")->execute([$idNegocio]);
-        $st = $pdo->prepare("INSERT INTO zonas (id_negocio, nombre, dias, orden) VALUES (?, ?, ?, ?)");
+        $st = $pdo->prepare("INSERT INTO zonas (id_negocio, nombre, dias, colonias, orden) VALUES (?, ?, ?, ?, ?)");
         foreach ($zonas as $orden => $z) {
             $nombre = trim((string)($z['nombre'] ?? ''));
             if ($nombre === '') continue;
             $dias = is_array($z['dias'] ?? null) ? implode(',', $z['dias']) : (string)($z['dias'] ?? '');
-            $st->execute([$idNegocio, $nombre, $dias, $orden]);
+            $cols = is_array($z['colonias'] ?? null) ? json_encode(array_values($z['colonias']), JSON_UNESCAPED_UNICODE) : null;
+            $st->execute([$idNegocio, $nombre, $dias, $cols, $orden]);
         }
         $pdo->commit();
     } catch (Throwable $e) {
@@ -60,6 +63,36 @@ function dias_de_zona(int $idNegocio, string $nombreZona): array {
         if (mb_strtolower($z['nombre'], 'UTF-8') === $buscado) return $z['dias'];
     }
     return [];
+}
+
+// Busca colonias del catálogo SEPOMEX por nombre o por CP. Devuelve [{cp,colonia,municipio}].
+function buscar_colonias(string $q, int $limit = 12): array {
+    $q = trim($q);
+    if (mb_strlen($q) < 3) return [];
+    $pdo = conexion();
+    if (ctype_digit($q)) {
+        $st = $pdo->prepare("SELECT cp, colonia, municipio FROM colonias WHERE cp LIKE ? ORDER BY colonia LIMIT ?");
+        $st->bindValue(1, $q . '%');
+    } else {
+        $st = $pdo->prepare("SELECT cp, colonia, municipio FROM colonias WHERE colonia LIKE ? ORDER BY colonia LIMIT ?");
+        $st->bindValue(1, '%' . $q . '%');
+    }
+    $st->bindValue(2, $limit, PDO::PARAM_INT);
+    $st->execute();
+    return $st->fetchAll(PDO::FETCH_ASSOC);
+}
+
+// Dada una colonia (por su CP), ¿a qué zona del negocio pertenece? Devuelve la zona
+// (nombre, dias, colonias) o null. Sirve para autodetectar la zona de un cliente.
+function zona_de_cp(int $idNegocio, string $cp): ?array {
+    $cp = trim($cp);
+    if ($cp === '') return null;
+    foreach (listar_zonas($idNegocio) as $z) {
+        foreach ($z['colonias'] as $col) {
+            if ((string)($col['cp'] ?? '') === $cp) return $z;
+        }
+    }
+    return null;
 }
 
 // ---------- Directorio de clientes ----------
@@ -82,7 +115,7 @@ function buscar_cliente_por_numero(int $idNegocio, string $numero): ?array {
     return null;
 }
 
-function crear_cliente(int $idNegocio, string $nombre, string $numero, string $zona, string $direccion, string $notas = ''): array {
+function crear_cliente(int $idNegocio, string $nombre, string $numero, string $zona, string $colonia, string $cp, string $direccion, string $notas = ''): array {
     $nombre = trim($nombre);
     $numero = normalizar_numero($numero);
     if ($nombre === '' || $numero === '') return ['exito' => false, 'mensaje' => 'Nombre y WhatsApp son obligatorios.'];
@@ -91,9 +124,12 @@ function crear_cliente(int $idNegocio, string $nombre, string $numero, string $z
         return ['exito' => false, 'mensaje' => 'Ya existe un cliente con ese número.'];
     }
     $st = conexion()->prepare(
-        "INSERT INTO clientes (id_negocio, nombre, numero, zona, direccion, notas) VALUES (?, ?, ?, ?, ?, ?)"
+        "INSERT INTO clientes (id_negocio, nombre, numero, zona, colonia, cp, direccion, notas) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
     );
-    $st->execute([$idNegocio, $nombre, $numero, trim($zona) ?: null, trim($direccion) ?: null, trim($notas) ?: null]);
+    $st->execute([
+        $idNegocio, $nombre, $numero, trim($zona) ?: null,
+        trim($colonia) ?: null, trim($cp) ?: null, trim($direccion) ?: null, trim($notas) ?: null,
+    ]);
     return ['exito' => true, 'id' => (int)conexion()->lastInsertId()];
 }
 

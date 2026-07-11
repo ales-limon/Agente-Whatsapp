@@ -30,6 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $r = crear_cliente(
             $idNegocio,
             $_POST['nombre'] ?? '', $_POST['numero'] ?? '', $_POST['zona'] ?? '',
+            $_POST['colonia'] ?? '', $_POST['cp'] ?? '',
             $_POST['direccion'] ?? '', $_POST['notas'] ?? ''
         );
         if ($r['exito']) $mensaje = 'Cliente agregado.';
@@ -42,6 +43,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $zonas    = listar_zonas($idNegocio);
 $clientes = listar_clientes($idNegocio);
+// Mapa CP -> nombre de zona, para autodetectar la zona al elegir una colonia.
+$zonaPorCp = [];
+foreach ($zonas as $z) {
+    foreach ($z['colonias'] as $col) {
+        if (!empty($col['cp'])) $zonaPorCp[(string)$col['cp']] = $z['nombre'];
+    }
+}
 function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 
 $css = '
@@ -60,6 +68,12 @@ $css = '
   .tabla-cli tr:last-child td { border-bottom: 0; }
   .pill-zona { background: var(--badge-bg); color: var(--marca); font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; }
   .cli-info { font-size: 13px; color: var(--texto-2); margin: 0 0 14px; }
+  .col-sug { position: absolute; top: 100%; left: 0; right: 0; z-index: 20; background: var(--superficie); border: 1px solid var(--borde); border-top: 0; border-radius: 0 0 var(--radio) var(--radio); max-height: 240px; overflow-y: auto; box-shadow: 0 8px 24px rgba(10,27,34,.14); }
+  .col-sug:empty { display: none; }
+  .col-op { padding: 8px 11px; font-size: 13px; color: var(--tinta); cursor: pointer; border-bottom: 1px solid var(--borde); }
+  .col-op:last-child { border-bottom: 0; }
+  .col-op:hover { background: var(--badge-bg); }
+  .col-op small { color: var(--texto-2); }
 ';
 
 layout_inicio('Clientes', 'negocio', 'clientes', ['negocio' => $negocio, 'css' => $css]);
@@ -77,13 +91,19 @@ layout_inicio('Clientes', 'negocio', 'clientes', ['negocio' => $negocio, 'css' =
       <input type="hidden" name="accion" value="crear_cliente">
       <div class="campo-mini"><label>Nombre</label><input type="text" name="nombre" required style="width:170px;"></div>
       <div class="campo-mini"><label>WhatsApp</label><input type="text" name="numero" required placeholder="+5215512345678" style="width:160px;"></div>
+      <div class="campo-mini" style="position:relative;"><label>Colonia (buscar por nombre o CP)</label>
+        <input type="text" id="col-buscar" autocomplete="off" placeholder="Ej. Providencia o 44630" style="width:210px;">
+        <input type="hidden" name="colonia" id="col-nombre">
+        <input type="hidden" name="cp" id="col-cp">
+        <div id="col-sug" class="col-sug"></div>
+      </div>
       <div class="campo-mini"><label>Zona</label>
-        <select name="zona" style="width:150px;">
+        <select name="zona" id="sel-zona" style="width:140px;">
           <option value="">— Sin zona —</option>
           <?php foreach ($zonas as $z): ?><option value="<?= h($z['nombre']) ?>"><?= h($z['nombre']) ?></option><?php endforeach; ?>
         </select>
       </div>
-      <div class="campo-mini"><label>Dirección</label><input type="text" name="direccion" placeholder="Calle, número, colonia" style="width:230px;"></div>
+      <div class="campo-mini"><label>Calle y número</label><input type="text" name="direccion" placeholder="Calle, número, referencias" style="width:210px;"></div>
       <div class="campo-mini"><label>Notas (opcional)</label><input type="text" name="notas" style="width:150px;"></div>
       <button class="btn btn--primario" type="submit">Agregar</button>
     </form>
@@ -137,6 +157,43 @@ layout_inicio('Clientes', 'negocio', 'clientes', ['negocio' => $negocio, 'css' =
       sinRes.style.display = vis === 0 ? 'block' : 'none';
     });
   }
+
+  // Buscador de colonias (SEPOMEX) con autocompletado + auto-selección de zona.
+  var ZONA_POR_CP = <?= json_encode($zonaPorCp, JSON_UNESCAPED_UNICODE) ?>;
+  (function () {
+    var inp = document.getElementById('col-buscar');
+    var sug = document.getElementById('col-sug');
+    if (!inp) return;
+    var timer;
+    inp.addEventListener('input', function () {
+      clearTimeout(timer);
+      document.getElementById('col-nombre').value = '';
+      document.getElementById('col-cp').value = '';
+      var qq = this.value.trim();
+      if (qq.length < 3) { sug.innerHTML = ''; return; }
+      timer = setTimeout(function () {
+        fetch('buscar_colonia.php?q=' + encodeURIComponent(qq))
+          .then(function (r) { return r.json(); })
+          .then(function (list) {
+            sug.innerHTML = (list || []).map(function (c) {
+              return '<div class="col-op" data-cp="' + c.cp + '" data-col="' + String(c.colonia).replace(/"/g, '&quot;') + '">' +
+                c.colonia + ' <small>— ' + c.municipio + ', CP ' + c.cp + '</small></div>';
+            }).join('');
+          }).catch(function () { sug.innerHTML = ''; });
+      }, 250);
+    });
+    sug.addEventListener('click', function (e) {
+      var op = e.target.closest('.col-op'); if (!op) return;
+      var cp = op.getAttribute('data-cp'), col = op.getAttribute('data-col');
+      document.getElementById('col-nombre').value = col;
+      document.getElementById('col-cp').value = cp;
+      inp.value = col + ' (CP ' + cp + ')';
+      sug.innerHTML = '';
+      var z = ZONA_POR_CP[cp];
+      if (z) { var sel = document.getElementById('sel-zona'); if (sel) { for (var i = 0; i < sel.options.length; i++) { if (sel.options[i].value === z) { sel.selectedIndex = i; break; } } } }
+    });
+    document.addEventListener('click', function (e) { if (!inp.contains(e.target) && !sug.contains(e.target)) sug.innerHTML = ''; });
+  })();
 </script>
 <?php
 layout_fin();

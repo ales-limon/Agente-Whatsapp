@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS zonas (
   id_negocio INT NOT NULL,
   nombre VARCHAR(100) NOT NULL,
   dias VARCHAR(80) NOT NULL DEFAULT '',
+  colonias TEXT NULL,
   orden INT NOT NULL DEFAULT 0,
   creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   KEY idx_negocio (id_negocio),
@@ -39,11 +40,24 @@ CREATE TABLE IF NOT EXISTS clientes (
   nombre VARCHAR(160) NOT NULL,
   numero VARCHAR(40) NOT NULL,
   zona VARCHAR(100) NULL,
+  colonia VARCHAR(160) NULL,
+  cp VARCHAR(5) NULL,
   direccion VARCHAR(255) NULL,
   notas VARCHAR(255) NULL,
   creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   KEY idx_negocio_numero (id_negocio, numero),
   FOREIGN KEY (id_negocio) REFERENCES negocios(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Catálogo oficial SEPOMEX (referencia global, NO por negocio) de la Zona
+-- Metropolitana de Guadalajara. Alimenta el buscador de colonias con CP.
+CREATE TABLE IF NOT EXISTS colonias (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  cp VARCHAR(5) NOT NULL,
+  colonia VARCHAR(160) NOT NULL,
+  municipio VARCHAR(120) NOT NULL,
+  KEY idx_colonia (colonia),
+  KEY idx_cp (cp)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS usuarios (

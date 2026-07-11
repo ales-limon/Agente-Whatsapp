@@ -72,6 +72,37 @@ if (!$colExiste('citas', 'direccion')) {
     $pdo->exec("ALTER TABLE citas ADD COLUMN direccion VARCHAR(255) NULL AFTER profesional");
     echo "Columna citas.direccion agregada.\n";
 }
+if (!$colExiste('zonas', 'colonias')) {
+    $pdo->exec("ALTER TABLE zonas ADD COLUMN colonias TEXT NULL AFTER dias");
+    echo "Columna zonas.colonias agregada.\n";
+}
+if (!$colExiste('clientes', 'colonia')) {
+    $pdo->exec("ALTER TABLE clientes ADD COLUMN colonia VARCHAR(160) NULL AFTER zona");
+    echo "Columna clientes.colonia agregada.\n";
+}
+if (!$colExiste('clientes', 'cp')) {
+    $pdo->exec("ALTER TABLE clientes ADD COLUMN cp VARCHAR(5) NULL AFTER colonia");
+    echo "Columna clientes.cp agregada.\n";
+}
+
+// Cargar el catálogo SEPOMEX (Zona Metropolitana de Guadalajara) la primera vez.
+if ((int)$pdo->query("SELECT COUNT(*) FROM colonias")->fetchColumn() === 0) {
+    $csv = __DIR__ . '/database/colonias_zmg.csv';
+    if (is_file($csv) && ($fh = fopen($csv, 'r'))) {
+        fgetcsv($fh); // encabezado
+        $st = $pdo->prepare("INSERT INTO colonias (cp, colonia, municipio) VALUES (?, ?, ?)");
+        $pdo->beginTransaction();
+        $nCol = 0;
+        while (($r = fgetcsv($fh)) !== false) {
+            if (count($r) < 3 || $r[0] === '' || $r[1] === '') continue;
+            $st->execute([$r[0], $r[1], $r[2]]);
+            $nCol++;
+        }
+        $pdo->commit();
+        fclose($fh);
+        echo "Colonias SEPOMEX (ZMG) importadas: $nCol.\n";
+    }
+}
 foreach ([
     'pagado'        => "ALTER TABLE citas ADD COLUMN pagado TINYINT(1) NOT NULL DEFAULT 0 AFTER estado",
     'metodo_pago'   => "ALTER TABLE citas ADD COLUMN metodo_pago VARCHAR(20) NULL AFTER pagado",

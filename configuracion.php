@@ -70,7 +70,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $zn = trim($zn);
         if ($zn === '') continue;
         $dias = array_values(array_intersect(array_keys($diasOrden), (array)(($_POST['zona_dias'][$i] ?? []))));
-        $zonasPost[] = ['nombre' => $zn, 'dias' => $dias];
+        $cols = json_decode((string)($_POST['zona_colonias'][$i] ?? ''), true);
+        $cols = is_array($cols) ? $cols : [];
+        $zonasPost[] = ['nombre' => $zn, 'dias' => $dias, 'colonias' => $cols];
     }
     guardar_zonas($idNegocio, $zonasPost);
 
@@ -147,6 +149,20 @@ $css = '
   .zona-dias { display: flex; flex-wrap: wrap; gap: 8px 14px; }
   .zona-dias label { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: var(--tinta); margin: 0; font-weight: 400; }
   .zona-dias input { width: auto; }
+  .zona-cols { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--borde); }
+  .zona-col-buscar { position: relative; max-width: 360px; }
+  .zona-col-buscar input { width: 100%; }
+  .col-sug { position: absolute; top: 100%; left: 0; right: 0; z-index: 20; background: var(--superficie); border: 1px solid var(--borde); border-top: 0; border-radius: 0 0 var(--radio) var(--radio); max-height: 240px; overflow-y: auto; box-shadow: 0 8px 24px rgba(10,27,34,.14); }
+  .col-sug:empty { display: none; }
+  .col-op { padding: 8px 11px; font-size: 13px; color: var(--tinta); cursor: pointer; border-bottom: 1px solid var(--borde); }
+  .col-op:last-child { border-bottom: 0; }
+  .col-op:hover { background: var(--badge-bg); }
+  .col-op small { color: var(--texto-2); }
+  .zona-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .zona-chips:empty { margin-top: 0; }
+  .chip-col { display: inline-flex; align-items: center; gap: 6px; background: var(--badge-bg); color: var(--marca); font-size: 12px; font-weight: 600; padding: 4px 6px 4px 10px; border-radius: 999px; }
+  .chip-x { cursor: pointer; font-weight: 700; font-style: normal; line-height: 1; padding: 0 4px; opacity: .7; }
+  .chip-x:hover { opacity: 1; }
 ';
 layout_inicio('Configuración', 'negocio', 'config', ['negocio' => $negocio, 'css' => $css]);
 ?>
@@ -290,6 +306,18 @@ layout_inicio('Configuración', 'negocio', 'config', ['negocio' => $negocio, 'cs
                   <label><input type="checkbox" name="zona_dias[<?= (int)$i ?>][]" value="<?= $dk ?>" <?= in_array($dk, $z['dias'] ?? [], true) ? 'checked' : '' ?>> <?= $dl ?></label>
                 <?php endforeach; ?>
               </div>
+              <div class="zona-cols">
+                <div class="zona-col-buscar">
+                  <input type="text" class="col-buscar-z" autocomplete="off" placeholder="Agregar colonia por nombre o CP...">
+                  <div class="col-sug"></div>
+                </div>
+                <input type="hidden" name="zona_colonias[<?= (int)$i ?>]" class="zona-colonias-json" value="<?= htmlspecialchars(json_encode(array_values($z['colonias'] ?? []), JSON_UNESCAPED_UNICODE), ENT_QUOTES) ?>">
+                <div class="zona-chips">
+                  <?php foreach (($z['colonias'] ?? []) as $col): ?>
+                    <span class="chip-col" data-cp="<?= htmlspecialchars((string)($col['cp'] ?? ''), ENT_QUOTES) ?>" data-col="<?= htmlspecialchars((string)($col['colonia'] ?? ''), ENT_QUOTES) ?>" data-mun="<?= htmlspecialchars((string)($col['municipio'] ?? ''), ENT_QUOTES) ?>"><?= htmlspecialchars((string)($col['colonia'] ?? ''), ENT_QUOTES) ?> · <?= htmlspecialchars((string)($col['cp'] ?? ''), ENT_QUOTES) ?><b class="chip-x">&times;</b></span>
+                  <?php endforeach; ?>
+                </div>
+              </div>
             </div>
           <?php endforeach; ?>
         </div>
@@ -378,10 +406,75 @@ layout_inicio('Configuración', 'negocio', 'config', ['negocio' => $negocio, 'cs
     div.innerHTML =
       '<div class="zona-top"><input type="text" name="zona_nombre[' + i + ']" placeholder="Nombre de la zona (ej. Norte)">' +
       '<button type="button" class="btn-x">&times;</button></div>' +
-      '<div class="zona-dias">' + dias + '</div>';
-    div.querySelector('.btn-x').addEventListener('click', function () { div.remove(); });
+      '<div class="zona-dias">' + dias + '</div>' +
+      '<div class="zona-cols">' +
+        '<div class="zona-col-buscar"><input type="text" class="col-buscar-z" autocomplete="off" placeholder="Agregar colonia por nombre o CP..."><div class="col-sug"></div></div>' +
+        '<input type="hidden" name="zona_colonias[' + i + ']" class="zona-colonias-json" value="[]">' +
+        '<div class="zona-chips"></div>' +
+      '</div>';
+    div.querySelector('.zona-top .btn-x').addEventListener('click', function () { div.remove(); });
     document.getElementById('zonas-cont').appendChild(div);
   });
+
+  // --- Colonias por zona (autocompletado SEPOMEX + chips) ---
+  function serializarZona(fila) {
+    var cols = [];
+    fila.querySelectorAll('.zona-chips .chip-col').forEach(function (ch) {
+      cols.push({ cp: ch.getAttribute('data-cp'), colonia: ch.getAttribute('data-col'), municipio: ch.getAttribute('data-mun') });
+    });
+    fila.querySelector('.zona-colonias-json').value = JSON.stringify(cols);
+  }
+  function agregarChip(fila, cp, col, mun) {
+    var chips = fila.querySelector('.zona-chips');
+    var ya = chips.querySelector('.chip-col[data-cp="' + cp + '"][data-col="' + String(col).replace(/"/g, '\\"') + '"]');
+    if (ya) return;
+    var span = document.createElement('span');
+    span.className = 'chip-col';
+    span.setAttribute('data-cp', cp);
+    span.setAttribute('data-col', col);
+    span.setAttribute('data-mun', mun || '');
+    span.innerHTML = col.replace(/</g, '&lt;') + ' · ' + cp + '<b class="chip-x">&times;</b>';
+    chips.appendChild(span);
+    serializarZona(fila);
+  }
+  var cont = document.getElementById('zonas-cont');
+  if (cont) {
+    var timers = new WeakMap();
+    cont.addEventListener('input', function (e) {
+      var inp = e.target.closest('.col-buscar-z'); if (!inp) return;
+      var fila = inp.closest('.zona-fila');
+      var sug = fila.querySelector('.col-sug');
+      clearTimeout(timers.get(inp));
+      var qq = inp.value.trim();
+      if (qq.length < 3) { sug.innerHTML = ''; return; }
+      var t = setTimeout(function () {
+        fetch('buscar_colonia.php?q=' + encodeURIComponent(qq))
+          .then(function (r) { return r.json(); })
+          .then(function (list) {
+            sug.innerHTML = (list || []).map(function (c) {
+              return '<div class="col-op" data-cp="' + c.cp + '" data-col="' + String(c.colonia).replace(/"/g, '&quot;') + '" data-mun="' + String(c.municipio).replace(/"/g, '&quot;') + '">' +
+                c.colonia + ' <small>— ' + c.municipio + ', CP ' + c.cp + '</small></div>';
+            }).join('');
+          }).catch(function () { sug.innerHTML = ''; });
+      }, 250);
+      timers.set(inp, t);
+    });
+    cont.addEventListener('click', function (e) {
+      var op = e.target.closest('.col-op');
+      if (op) {
+        var fila = op.closest('.zona-fila');
+        agregarChip(fila, op.getAttribute('data-cp'), op.getAttribute('data-col'), op.getAttribute('data-mun'));
+        fila.querySelector('.col-sug').innerHTML = '';
+        var inp = fila.querySelector('.col-buscar-z'); inp.value = ''; inp.focus();
+        return;
+      }
+      var x = e.target.closest('.chip-x');
+      if (x) { var f = x.closest('.zona-fila'); x.closest('.chip-col').remove(); serializarZona(f); }
+    });
+    document.addEventListener('click', function (e) {
+      if (!e.target.closest('.zona-col-buscar')) cont.querySelectorAll('.col-sug').forEach(function (s) { s.innerHTML = ''; });
+    });
+  }
 </script>
 <?php
 layout_fin();
