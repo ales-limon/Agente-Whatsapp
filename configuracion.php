@@ -157,9 +157,9 @@ layout_inicio('Configuración', 'negocio', 'config', ['negocio' => $negocio, 'cs
         <div class="grupo"><label>Ubicación</label><input type="text" name="ubicacion" value="<?= val($c, 'ubicacion') ?>"></div>
         <div class="grupo"><label>Teléfono</label><input type="tel" name="telefono" value="<?= val($c, 'telefono') ?>"></div>
         <div class="grupo">
-          <label>Número de WhatsApp del bot (lo asigna el administrador)</label>
-          <input type="text" value="<?= val($negocio, 'numero_whatsapp') ?: 'Sin asignar' ?>" disabled style="background:#EEF3F4; color:var(--texto-2);">
-          <div class="hint">El número por el que tus clientes le escriben al bot. Lo configura el administrador del sistema.</div>
+          <label>Número de WhatsApp del bot</label>
+          <input type="text" value="<?= val($negocio, 'numero_whatsapp') ?: 'Sin asignar — en modo prueba' ?>" disabled style="background:#EEF3F4; color:var(--texto-2);">
+          <div class="hint">WhatsApp se activa cuando tengas tu <strong>número oficial dado de alta en Meta</strong>. Ese alta la hace cada negocio (te guiamos paso a paso al contratar un plan). Mientras tanto, prueba y comparte tu <strong>chat web</strong> (pestaña "Chat web"), que funciona sin WhatsApp.</div>
         </div>
         <div class="grupo">
           <label>Número para recibir avisos de citas (tu WhatsApp)</label>

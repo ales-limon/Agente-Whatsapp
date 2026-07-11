@@ -213,6 +213,7 @@ function registrar_cuenta(string $nombreNegocio, string $nombreDueno, string $em
     $pdo->beginTransaction();
     try {
         $idNegocio = crear_negocio($nombreNegocio);
+        fijar_limite_mensajes($idNegocio, LIMITE_PRUEBA); // arranca en modo prueba (20 msjs)
         $r = crear_usuario($email, $password, $nombreDueno, 'admin', $idNegocio);
         if (!$r['exito']) { $pdo->rollBack(); return $r; }
         $pdo->commit();

@@ -4,6 +4,11 @@
 
 require_once __DIR__ . '/../config/db.php';
 
+// Tope de mensajes con el que arranca un negocio que se registra SOLO (self-service):
+// es su "prueba" — puede probar el bot por el chat web con estos mensajes. Al contratar
+// un plan, el superadmin le sube el límite (Esencial 500 / Negocio 1500).
+define('LIMITE_PRUEBA', 20);
+
 function slugify(string $s): string {
     $s = mb_strtolower(trim($s), 'UTF-8');
     $s = strtr($s, ['á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ñ' => 'n', 'ü' => 'u']);

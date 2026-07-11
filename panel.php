@@ -6,6 +6,7 @@ require_once __DIR__ . '/src/auth.php';
 require_once __DIR__ . '/src/negocios.php';
 require_once __DIR__ . '/src/layout.php';
 require_once __DIR__ . '/src/escalacion.php';
+require_once __DIR__ . '/src/uso.php';
 require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/csrf.php';
 cargar_entorno();
@@ -96,10 +97,33 @@ $css = '
   .tab.activo { color: var(--marca); border-bottom-color: var(--accion); font-weight: 600; }
   .tab-panel { display: none; }
   .tab-panel.activo { display: block; }
+  .estado-prueba { background: var(--badge-bg); border: 1px solid var(--accion); border-radius: var(--radio); padding: 16px 18px; margin-bottom: 24px; }
+  .estado-prueba__t { font-family: var(--fuente-titulo); font-weight: 700; font-size: 15px; color: var(--marca); margin-bottom: 6px; }
+  .estado-prueba p { margin: 6px 0 0; font-size: 13.5px; color: var(--tinta); line-height: 1.5; }
+  .estado-prueba a { color: var(--marca); font-weight: 600; }
+  .estado-prueba .barra { height: 7px; background: #fff; border-radius: 999px; overflow: hidden; margin: 10px 0 2px; max-width: 320px; }
+  .estado-prueba .barra > span { display: block; height: 100%; background: var(--accion); }
 ';
 layout_inicio('Citas', 'negocio', 'citas', ['negocio' => $negocio, 'css' => $css]);
 ?>
   <h1 class="contenido__h1">Citas</h1>
+
+  <?php
+    $waActivo = trim((string)($negocio['numero_whatsapp'] ?? '')) !== '';
+    $usados   = (int)$uso['mensajes'];
+    $limite   = (int)($negocio['limite_mensajes_mes'] ?? 0);
+  ?>
+  <?php if (!$waActivo): ?>
+    <div class="estado-prueba">
+      <div class="estado-prueba__t"><i class="fas fa-flask"></i> Estás en modo prueba — WhatsApp aún no está activo</div>
+      <p>Prueba tu asistente ahora mismo por el <strong>chat web</strong> (pestaña <a href="chat.php?t=<?= $slugSafe ?>">Probar chat</a>) o comparte tu enlace del chat con un cliente.</p>
+      <?php if ($limite > 0): ?>
+        <div class="barra"><span style="width:<?= min(100, (int)round($usados / max(1, $limite) * 100)) ?>%;"></span></div>
+        <p>Llevas <strong><?= $usados ?> de <?= $limite ?></strong> mensajes de prueba este mes.</p>
+      <?php endif; ?>
+      <p><strong>Para activar WhatsApp</strong> necesitas tu número oficial dado de alta en <strong>Meta</strong> (te guiamos en el proceso) y elegir un plan. Cuando quieras contratar, contáctanos.</p>
+    </div>
+  <?php endif; ?>
 
   <?php if ($escalados): ?>
     <div class="atencion">
