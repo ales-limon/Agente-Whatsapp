@@ -72,6 +72,21 @@ if (esta_autenticado()) { header('Location: login.php'); exit; }
   footer.pie { border-top: 1px solid var(--borde); padding: 26px 0; }
   .pie__in { max-width: 1080px; margin: 0 auto; padding: 0 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; color: var(--texto-2); font-size: 13px; }
 
+  .planes-nota { text-align: center; font-size: 14px; color: var(--texto-2); margin: -26px 0 34px; }
+  .planes-nota strong { color: var(--tinta); }
+  .planes { display: grid; grid-template-columns: repeat(auto-fit, minmax(258px, 1fr)); gap: 20px; align-items: stretch; max-width: 900px; margin: 0 auto; }
+  .plan { background: var(--fondo); border: 1px solid var(--borde); border-radius: var(--radio-lg); padding: 28px 26px; display: flex; flex-direction: column; }
+  .plan--destacado { background: var(--superficie); border-color: var(--accion); box-shadow: 0 12px 36px rgba(19,132,150,.16); position: relative; }
+  .plan__badge { position: absolute; top: -12px; left: 26px; background: var(--accion); color: #fff; font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 999px; }
+  .plan__nombre { font-family: var(--fuente-titulo); font-size: 20px; font-weight: 700; color: var(--tinta); margin: 0 0 4px; }
+  .plan__desc { font-size: 13.5px; color: var(--texto-2); margin: 0 0 16px; min-height: 40px; line-height: 1.45; }
+  .plan__precio { font-family: var(--fuente-titulo); font-size: 34px; font-weight: 700; color: var(--marca); line-height: 1; }
+  .plan__precio small { font-size: 14px; font-weight: 500; color: var(--texto-2); }
+  .plan__lista { list-style: none; padding: 0; margin: 18px 0 22px; display: flex; flex-direction: column; gap: 10px; }
+  .plan__lista li { font-size: 14px; color: var(--tinta); display: flex; gap: 9px; align-items: flex-start; line-height: 1.42; }
+  .plan__lista i { color: var(--accion); margin-top: 3px; font-size: 13px; flex-shrink: 0; }
+  .plan .btn { margin-top: auto; }
+
   @media (max-width: 800px) {
     .hero { grid-template-columns: 1fr; gap: 34px; padding: 40px 0 44px; }
     .hero h1 { font-size: 34px; }
@@ -88,6 +103,7 @@ if (esta_autenticado()) { header('Location: login.php'); exit; }
         <span class="marca__nombre">Agente de WhatsApp</span>
       </div>
       <div class="nav__acc">
+        <a class="enlace solo-desktop" href="#planes">Planes</a>
         <a class="enlace solo-desktop" href="login.php">Iniciar sesión</a>
         <a class="btn btn--primario" href="registro.php">Crear cuenta</a>
       </div>
@@ -198,7 +214,60 @@ if (esta_autenticado()) { header('Location: login.php'); exit; }
     </div>
   </section>
 
-  <section class="bloque">
+  <section class="bloque" id="planes">
+    <div class="contenedor">
+      <div class="bloque__t">
+        <h2>Planes simples, sin sorpresas</h2>
+        <p>Empieza gratis. Cuando estés listo, eliges el plan que le quede a tu negocio.</p>
+      </div>
+      <p class="planes-nota"><i class="fas fa-gift" style="color:var(--accion);"></i> <strong>Prueba gratis con 20 mensajes</strong>, sin tarjeta. Un "mensaje" es cada respuesta que da el asistente.</p>
+      <div class="planes">
+        <div class="plan">
+          <div class="plan__nombre">Esencial</div>
+          <p class="plan__desc">Para negocios que empiezan a automatizar su WhatsApp.</p>
+          <div class="plan__precio">$750 <small>MXN / mes</small></div>
+          <ul class="plan__lista">
+            <li><i class="fas fa-check"></i> 500 mensajes atendidos al mes</li>
+            <li><i class="fas fa-check"></i> WhatsApp y chat web de tu negocio</li>
+            <li><i class="fas fa-check"></i> Agenda automática y recordatorios</li>
+            <li><i class="fas fa-check"></i> Escala a una persona cuando hace falta</li>
+            <li><i class="fas fa-check"></i> Panel de citas y conversaciones</li>
+          </ul>
+          <a class="btn btn--secundario btn--bloque" href="registro.php">Empezar gratis</a>
+        </div>
+
+        <div class="plan plan--destacado">
+          <span class="plan__badge">Más popular</span>
+          <div class="plan__nombre">Negocio</div>
+          <p class="plan__desc">Para negocios con buen flujo de clientes y varios servicios.</p>
+          <div class="plan__precio">$1,250 <small>MXN / mes</small></div>
+          <ul class="plan__lista">
+            <li><i class="fas fa-check"></i> 1,500 mensajes atendidos al mes</li>
+            <li><i class="fas fa-check"></i> Todo lo del plan Esencial</li>
+            <li><i class="fas fa-check"></i> Personal con nombre (agenda por especialista)</li>
+            <li><i class="fas fa-check"></i> Módulo de caja: cobros y corte del día</li>
+            <li><i class="fas fa-check"></i> Soporte prioritario</li>
+          </ul>
+          <a class="btn btn--primario btn--bloque" href="registro.php">Empezar gratis</a>
+        </div>
+
+        <div class="plan">
+          <div class="plan__nombre">A medida</div>
+          <p class="plan__desc">¿Mucho volumen o varias sucursales? Lo armamos a tu tamaño.</p>
+          <div class="plan__precio">Cotización</div>
+          <ul class="plan__lista">
+            <li><i class="fas fa-check"></i> Mensajes a convenir</li>
+            <li><i class="fas fa-check"></i> Varias sucursales o marcas</li>
+            <li><i class="fas fa-check"></i> Onboarding acompañado</li>
+            <li><i class="fas fa-check"></i> Atención personalizada</li>
+          </ul>
+          <a class="btn btn--secundario btn--bloque" href="registro.php">Hablemos</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="bloque bloque--gris">
     <div class="contenedor">
       <div class="cta">
         <h2>Que tu agenda se llene sola</h2>
