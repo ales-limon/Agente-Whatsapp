@@ -6,6 +6,7 @@ require_once __DIR__ . '/src/entorno.php';
 require_once __DIR__ . '/src/auth.php';
 require_once __DIR__ . '/src/negocios.php';
 require_once __DIR__ . '/src/conocimiento.php';
+require_once __DIR__ . '/src/domicilio.php';
 require_once __DIR__ . '/src/layout.php';
 require_once __DIR__ . '/csrf.php';
 cargar_entorno();
@@ -36,6 +37,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'instrucciones_extra' => trim($_POST['instrucciones_extra'] ?? ''),
         'intervalo_minutos'   => max(5, (int)($_POST['intervalo_minutos'] ?? 30)),
         'recordatorio_horas_antes' => max(0, (int)($_POST['recordatorio_horas_antes'] ?? 0)),
+        'traslado_minutos'    => max(0, (int)($_POST['traslado_minutos'] ?? 0)),
+        'a_domicilio'         => !empty($_POST['a_domicilio']) ? 1 : 0,
         'horario_estructurado' => [],
         'servicios'           => [],
     ];
@@ -61,6 +64,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     guardar_configuracion($idNegocio, $datos);
 
+    // Zonas (modo a domicilio): cada zona con sus días de atención.
+    $zonasPost = [];
+    foreach (($_POST['zona_nombre'] ?? []) as $i => $zn) {
+        $zn = trim($zn);
+        if ($zn === '') continue;
+        $dias = array_values(array_intersect(array_keys($diasOrden), (array)(($_POST['zona_dias'][$i] ?? []))));
+        $zonasPost[] = ['nombre' => $zn, 'dias' => $dias];
+    }
+    guardar_zonas($idNegocio, $zonasPost);
+
     // Dirección (slug) del chat web: editable, con validación de unicidad.
     $nuevoSlug = trim($_POST['slug'] ?? '');
     if ($nuevoSlug !== '' && slugify($nuevoSlug) !== $negocio['slug']) {
@@ -81,6 +94,8 @@ if (isset($_GET['guardado'])) $mensaje = 'Configuración guardada correctamente.
 $c         = cargar_conocimiento($idNegocio);
 $servicios = $c['servicios'] ?? [];
 $recursos  = $c['recursos'] ?? [];
+$zonas     = listar_zonas($idNegocio);
+$aDomicilio = (int)($c['a_domicilio'] ?? 0) === 1;
 $horario   = $c['horario_estructurado'] ?? [];
 $urlChat   = base_url() . '/chat-publico.php?t=' . urlencode($negocio['slug']);
 function val($a, $k, $d = '') { return htmlspecialchars((string)($a[$k] ?? $d), ENT_QUOTES, 'UTF-8'); }
@@ -126,6 +141,12 @@ $css = '
     table.serv .col-x::before { content: none; }
   }
   .hint { font-size: 12px; color: var(--texto-2); margin-top: 5px; }
+  .zona-fila { border: 1px solid var(--borde); border-radius: var(--radio); padding: 12px 14px; margin-bottom: 12px; }
+  .zona-top { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .zona-top input { flex: 1; min-width: 0; }
+  .zona-dias { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+  .zona-dias label { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: var(--tinta); margin: 0; font-weight: 400; }
+  .zona-dias input { width: auto; }
 ';
 layout_inicio('Configuración', 'negocio', 'config', ['negocio' => $negocio, 'css' => $css]);
 ?>
@@ -142,6 +163,7 @@ layout_inicio('Configuración', 'negocio', 'config', ['negocio' => $negocio, 'cs
     <button type="button" class="tab" data-tab="horario">Horario</button>
     <button type="button" class="tab" data-tab="servicios">Servicios</button>
     <button type="button" class="tab" data-tab="personal">Personal</button>
+    <?php if ($aDomicilio): ?><button type="button" class="tab" data-tab="zonas">Zonas</button><?php endif; ?>
     <button type="button" class="tab" data-tab="reglas">Reglas</button>
     <button type="button" class="tab" data-tab="chatweb">Chat web</button>
   </div>
@@ -170,6 +192,17 @@ layout_inicio('Configuración', 'negocio', 'config', ['negocio' => $negocio, 'cs
           <label>Recordatorio automático al cliente (horas antes)</label>
           <input type="number" name="recordatorio_horas_antes" min="0" step="1" value="<?= (int)($c['recordatorio_horas_antes'] ?? 0) ?>" style="width:120px;">
           <div class="hint">Cuántas horas antes de su cita se le recuerda al cliente por WhatsApp. 0 = desactivado. Ej: 24 = un día antes. Solo aplica a clientes que agendaron por WhatsApp.</div>
+        </div>
+        <div class="grupo">
+          <label style="display:flex; align-items:center; gap:8px; color:var(--tinta);">
+            <input type="checkbox" name="a_domicilio" value="1" <?= $aDomicilio ? 'checked' : '' ?>> El negocio atiende a domicilio
+          </label>
+          <div class="hint">Actívalo si vas a casa del cliente. Habilita <strong>Zonas</strong> (qué días atiendes cada zona) y el <strong>Directorio de clientes</strong>. El agente identifica a tus clientes por su número y solo agenda a quienes ya conoces.</div>
+        </div>
+        <div class="grupo">
+          <label>Tiempo de traslado entre citas (minutos)</label>
+          <input type="number" name="traslado_minutos" min="0" step="5" value="<?= (int)($c['traslado_minutos'] ?? 0) ?>" style="width:120px;">
+          <div class="hint">Colchón que se reserva entre una cita y otra para el traslado. 0 = sin colchón. Ej: 45 = deja 45 min entre citas.</div>
         </div>
       </div>
     </div>
@@ -241,6 +274,29 @@ layout_inicio('Configuración', 'negocio', 'config', ['negocio' => $negocio, 'cs
       </div>
     </div>
 
+    <div class="tab-panel" data-panel="zonas">
+      <div class="seccion">
+        <h2>Zonas de atención</h2>
+        <p style="font-size:13px;color:var(--texto-2);margin:0 0 14px;">Crea tus zonas y marca <strong>qué días</strong> atiendes cada una. El agente ofrecerá a cada cliente solo los días de <em>su</em> zona. (El cliente se asigna a una zona en el <a href="clientes.php?t=<?= h($negocio['slug']) ?>">Directorio de clientes</a>.)</p>
+        <div id="zonas-cont">
+          <?php foreach ($zonas as $i => $z): ?>
+            <div class="zona-fila" data-i="<?= (int)$i ?>">
+              <div class="zona-top">
+                <input type="text" name="zona_nombre[<?= (int)$i ?>]" value="<?= htmlspecialchars((string)$z['nombre'], ENT_QUOTES) ?>" placeholder="Nombre de la zona (ej. Norte)">
+                <button type="button" class="btn-x" onclick="this.closest('.zona-fila').remove()">&times;</button>
+              </div>
+              <div class="zona-dias">
+                <?php foreach ($diasOrden as $dk => $dl): ?>
+                  <label><input type="checkbox" name="zona_dias[<?= (int)$i ?>][]" value="<?= $dk ?>" <?= in_array($dk, $z['dias'] ?? [], true) ? 'checked' : '' ?>> <?= $dl ?></label>
+                <?php endforeach; ?>
+              </div>
+            </div>
+          <?php endforeach; ?>
+        </div>
+        <button type="button" class="btn btn--secundario" id="add-zona" style="margin-top:12px;"><i class="fas fa-plus"></i> Agregar zona</button>
+      </div>
+    </div>
+
     <div class="tab-panel" data-panel="reglas">
       <div class="seccion">
         <h2>Reglas adicionales del asistente (opcional)</h2>
@@ -309,6 +365,22 @@ layout_inicio('Configuración', 'negocio', 'config', ['negocio' => $negocio, 'cs
       '<td class="col-x"><button type="button" class="btn-x">&times;</button></td>';
     tr.querySelector('.btn-x').addEventListener('click', function () { tr.remove(); });
     document.getElementById('pers-body').appendChild(tr);
+  });
+  var zonaIdx = <?= count($zonas) ?>;
+  var DIAS = <?= json_encode($diasOrden, JSON_UNESCAPED_UNICODE) ?>;
+  var addZona = document.getElementById('add-zona');
+  if (addZona) addZona.addEventListener('click', function () {
+    var i = zonaIdx++;
+    var dias = '';
+    for (var k in DIAS) { dias += '<label><input type="checkbox" name="zona_dias[' + i + '][]" value="' + k + '"> ' + DIAS[k] + '</label>'; }
+    var div = document.createElement('div');
+    div.className = 'zona-fila';
+    div.innerHTML =
+      '<div class="zona-top"><input type="text" name="zona_nombre[' + i + ']" placeholder="Nombre de la zona (ej. Norte)">' +
+      '<button type="button" class="btn-x">&times;</button></div>' +
+      '<div class="zona-dias">' + dias + '</div>';
+    div.querySelector('.btn-x').addEventListener('click', function () { div.remove(); });
+    document.getElementById('zonas-cont').appendChild(div);
   });
 </script>
 <?php

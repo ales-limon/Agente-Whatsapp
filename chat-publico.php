@@ -72,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $historial    = cargar_historial($idNegocio, $contacto);
     $c            = cargar_conocimiento($idNegocio);
-    $systemPrompt = construir_system_prompt($c);
+    $systemPrompt = construir_system_prompt($c) . bloque_contexto_domicilio($idNegocio, $c, $contacto);
 
     $uso       = ['entrada' => 0, 'salida' => 0];
     $respuesta = responder_con_claude($systemPrompt, $historial, $mensaje, $contacto, $idNegocio, $uso);

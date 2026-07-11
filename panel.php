@@ -179,7 +179,7 @@ layout_inicio('Citas', 'negocio', 'citas', ['negocio' => $negocio, 'css' => $css
     <?php else: ?>
       <table class="tabla">
         <thead>
-          <tr><th>Folio</th><th>Cliente</th><th>Servicio</th><th>Atiende</th><th>Día</th><th>Hora</th><th>Contacto</th><th>Estado</th><th></th></tr>
+          <tr><th>Folio</th><th>Cliente</th><th>Servicio</th><th>Atiende</th><?php if (!empty($negocio['a_domicilio'])): ?><th>Dirección</th><?php endif; ?><th>Día</th><th>Hora</th><th>Contacto</th><th>Estado</th><th></th></tr>
         </thead>
         <tbody>
         <?php foreach ($citas as $c): ?>
@@ -188,6 +188,7 @@ layout_inicio('Citas', 'negocio', 'citas', ['negocio' => $negocio, 'css' => $css
             <td><?= h($c['nombre']) ?></td>
             <td><?= h($c['servicio']) ?></td>
             <td><?= h($c['profesional'] ?? '') ?: '<span style="color:var(--texto-2)">—</span>' ?></td>
+            <?php if (!empty($negocio['a_domicilio'])): ?><td><?= h($c['direccion'] ?? '') ?: '<span style="color:var(--texto-2)">—</span>' ?></td><?php endif; ?>
             <td><?= h($c['dia_texto']) ?></td>
             <td><?= h($c['hora']) ?></td>
             <td><?= h($c['contacto']) ?></td>

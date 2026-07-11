@@ -3,6 +3,7 @@
 // El resto del sistema consume el mismo arreglo de siempre, sin enterarse del origen.
 
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/domicilio.php';
 
 function cargar_conocimiento(int $idNegocio): array {
     $pdo = conexion();
@@ -24,9 +25,12 @@ function cargar_conocimiento(int $idNegocio): array {
         'numero_whatsapp'     => $n['numero_whatsapp'] ?? '',
         'numero_avisos'       => $n['numero_avisos'] ?? '',
         'recordatorio_horas_antes' => (int)($n['recordatorio_horas_antes'] ?? 0),
+        'traslado_minutos'    => (int)($n['traslado_minutos'] ?? 0),
+        'a_domicilio'         => (int)($n['a_domicilio'] ?? 0),
         'horario_estructurado' => [],
         'servicios'           => [],
         'recursos'            => [],
+        'zonas'               => listar_zonas($idNegocio),
     ];
 
     $st = $pdo->prepare("SELECT dia, abre, cierra FROM horarios WHERE id_negocio = ?");

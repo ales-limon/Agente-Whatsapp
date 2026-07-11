@@ -128,7 +128,8 @@ function avisar_cita_agendada(array $c, array $cita): void {
     $mensaje = "Nueva cita en {$c['negocio']}:\n"
              . "Cliente: {$cita['nombre']}\n"
              . "Servicio: {$cita['servicio']}\n"
-             . "Cuándo: {$cuando}";
+             . "Cuándo: {$cuando}"
+             . (!empty($cita['direccion']) ? "\nDirección: {$cita['direccion']}" : '');
     try {
         enviar_whatsapp($para, $mensaje, $desde);
     } catch (Throwable $e) {

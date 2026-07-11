@@ -12,8 +12,38 @@ CREATE TABLE IF NOT EXISTS negocios (
   numero_avisos VARCHAR(40) NULL,
   limite_mensajes_mes INT NOT NULL DEFAULT 0,
   recordatorio_horas_antes INT NOT NULL DEFAULT 0,
+  traslado_minutos INT NOT NULL DEFAULT 0,
+  a_domicilio TINYINT(1) NOT NULL DEFAULT 0,
   activo TINYINT(1) NOT NULL DEFAULT 1,
   creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Zonas de atención (para negocios A DOMICILIO). Cada zona se atiende ciertos días
+-- (dias = CSV: 'lunes,miercoles'). El cliente se asigna a una zona por su nombre.
+CREATE TABLE IF NOT EXISTS zonas (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  id_negocio INT NOT NULL,
+  nombre VARCHAR(100) NOT NULL,
+  dias VARCHAR(80) NOT NULL DEFAULT '',
+  orden INT NOT NULL DEFAULT 0,
+  creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_negocio (id_negocio),
+  FOREIGN KEY (id_negocio) REFERENCES negocios(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Directorio de clientes conocidos (para negocios A DOMICILIO). El agente los
+-- identifica por su numero de WhatsApp y guarda su zona (por nombre) y direccion.
+CREATE TABLE IF NOT EXISTS clientes (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  id_negocio INT NOT NULL,
+  nombre VARCHAR(160) NOT NULL,
+  numero VARCHAR(40) NOT NULL,
+  zona VARCHAR(100) NULL,
+  direccion VARCHAR(255) NULL,
+  notas VARCHAR(255) NULL,
+  creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_negocio_numero (id_negocio, numero),
+  FOREIGN KEY (id_negocio) REFERENCES negocios(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS usuarios (
@@ -68,6 +98,7 @@ CREATE TABLE IF NOT EXISTS citas (
   nombre VARCHAR(160) NOT NULL,
   servicio VARCHAR(200) NULL,
   profesional VARCHAR(120) NULL,
+  direccion VARCHAR(255) NULL,
   fecha DATE NULL,
   dia_texto VARCHAR(120) NULL,
   hora VARCHAR(8) NULL,

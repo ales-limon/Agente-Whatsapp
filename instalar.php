@@ -60,6 +60,18 @@ if (!$colExiste('negocios', 'recordatorio_horas_antes')) {
     $pdo->exec("ALTER TABLE negocios ADD COLUMN recordatorio_horas_antes INT NOT NULL DEFAULT 0 AFTER limite_mensajes_mes");
     echo "Columna negocios.recordatorio_horas_antes agregada.\n";
 }
+if (!$colExiste('negocios', 'traslado_minutos')) {
+    $pdo->exec("ALTER TABLE negocios ADD COLUMN traslado_minutos INT NOT NULL DEFAULT 0 AFTER recordatorio_horas_antes");
+    echo "Columna negocios.traslado_minutos agregada.\n";
+}
+if (!$colExiste('negocios', 'a_domicilio')) {
+    $pdo->exec("ALTER TABLE negocios ADD COLUMN a_domicilio TINYINT(1) NOT NULL DEFAULT 0 AFTER traslado_minutos");
+    echo "Columna negocios.a_domicilio agregada.\n";
+}
+if (!$colExiste('citas', 'direccion')) {
+    $pdo->exec("ALTER TABLE citas ADD COLUMN direccion VARCHAR(255) NULL AFTER profesional");
+    echo "Columna citas.direccion agregada.\n";
+}
 foreach ([
     'pagado'        => "ALTER TABLE citas ADD COLUMN pagado TINYINT(1) NOT NULL DEFAULT 0 AFTER estado",
     'metodo_pago'   => "ALTER TABLE citas ADD COLUMN metodo_pago VARCHAR(20) NULL AFTER pagado",

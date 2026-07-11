@@ -32,9 +32,12 @@ function layout_inicio(string $titulo, string $contexto, string $activo, array $
             ['citas',  "panel.php?t=$slug",          'fa-calendar-check', 'Citas'],
             ['agenda', "agenda.php?t=$slug",         'fa-calendar-days',  'Agenda'],
             ['caja',   "caja.php?t=$slug",           'fa-cash-register',  'Caja'],
-            ['config', "configuracion.php?t=$slug",  'fa-sliders',        'Configuración'],
-            ['chat',   "chat.php?t=$slug",           'fa-comment-dots',   'Probar chat'],
         ];
+        if (!empty($neg['a_domicilio'])) {
+            $items[] = ['clientes', "clientes.php?t=$slug", 'fa-address-book', 'Clientes'];
+        }
+        $items[] = ['config', "configuracion.php?t=$slug",  'fa-sliders',      'Configuración'];
+        $items[] = ['chat',   "chat.php?t=$slug",           'fa-comment-dots', 'Probar chat'];
     }
     // Cuántos chats están esperando atención humana (para el contador en "Citas").
     $badgeCitas = ($contexto === 'negocio' && $neg) ? count(contactos_escalados((int)$neg['id'])) : 0;

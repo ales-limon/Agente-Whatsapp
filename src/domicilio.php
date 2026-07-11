@@ -1,0 +1,140 @@
+<?php
+// Modo A DOMICILIO: zonas de atención (con sus días) y directorio de clientes
+// conocidos. El agente identifica al cliente por su número de WhatsApp, obtiene su
+// zona y sólo ofrece los días en que el negocio atiende esa zona.
+
+require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/negocios.php'; // normalizar_numero, mismo_numero
+
+// Días de la semana (clave interna => etiqueta), en orden.
+function dias_semana(): array {
+    return [
+        'lunes' => 'Lunes', 'martes' => 'Martes', 'miercoles' => 'Miércoles',
+        'jueves' => 'Jueves', 'viernes' => 'Viernes', 'sabado' => 'Sábado', 'domingo' => 'Domingo',
+    ];
+}
+
+// ---------- Zonas ----------
+
+function listar_zonas(int $idNegocio): array {
+    $st = conexion()->prepare("SELECT id, nombre, dias FROM zonas WHERE id_negocio = ? ORDER BY orden, id");
+    $st->execute([$idNegocio]);
+    $out = [];
+    foreach ($st as $z) {
+        $out[] = [
+            'id'     => (int)$z['id'],
+            'nombre' => (string)$z['nombre'],
+            'dias'   => array_values(array_filter(array_map('trim', explode(',', (string)$z['dias'])))),
+        ];
+    }
+    return $out;
+}
+
+// Reemplaza todas las zonas del negocio. $zonas = [['nombre'=>..., 'dias'=>[...]], ...].
+// Se guarda por nombre (el cliente referencia la zona por su nombre), así que borrar
+// y reinsertar es seguro (no hay FKs por id apuntando a zonas).
+function guardar_zonas(int $idNegocio, array $zonas): void {
+    $pdo = conexion();
+    $pdo->beginTransaction();
+    try {
+        $pdo->prepare("DELETE FROM zonas WHERE id_negocio = ?")->execute([$idNegocio]);
+        $st = $pdo->prepare("INSERT INTO zonas (id_negocio, nombre, dias, orden) VALUES (?, ?, ?, ?)");
+        foreach ($zonas as $orden => $z) {
+            $nombre = trim((string)($z['nombre'] ?? ''));
+            if ($nombre === '') continue;
+            $dias = is_array($z['dias'] ?? null) ? implode(',', $z['dias']) : (string)($z['dias'] ?? '');
+            $st->execute([$idNegocio, $nombre, $dias, $orden]);
+        }
+        $pdo->commit();
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        throw $e;
+    }
+}
+
+// Días (claves) en que el negocio atiende una zona por su nombre. [] si no la halla.
+function dias_de_zona(int $idNegocio, string $nombreZona): array {
+    $buscado = mb_strtolower(trim($nombreZona), 'UTF-8');
+    if ($buscado === '') return [];
+    foreach (listar_zonas($idNegocio) as $z) {
+        if (mb_strtolower($z['nombre'], 'UTF-8') === $buscado) return $z['dias'];
+    }
+    return [];
+}
+
+// ---------- Directorio de clientes ----------
+
+function listar_clientes(int $idNegocio): array {
+    $st = conexion()->prepare("SELECT * FROM clientes WHERE id_negocio = ? ORDER BY nombre");
+    $st->execute([$idNegocio]);
+    return $st->fetchAll();
+}
+
+// Busca un cliente por su número de WhatsApp (compara por los últimos 10 dígitos,
+// robusto al +52/+521). Devuelve la fila o null.
+function buscar_cliente_por_numero(int $idNegocio, string $numero): ?array {
+    if (trim($numero) === '') return null;
+    $st = conexion()->prepare("SELECT * FROM clientes WHERE id_negocio = ?");
+    $st->execute([$idNegocio]);
+    foreach ($st as $c) {
+        if (mismo_numero($numero, (string)$c['numero'])) return $c;
+    }
+    return null;
+}
+
+function crear_cliente(int $idNegocio, string $nombre, string $numero, string $zona, string $direccion, string $notas = ''): array {
+    $nombre = trim($nombre);
+    $numero = normalizar_numero($numero);
+    if ($nombre === '' || $numero === '') return ['exito' => false, 'mensaje' => 'Nombre y WhatsApp son obligatorios.'];
+
+    if (buscar_cliente_por_numero($idNegocio, $numero)) {
+        return ['exito' => false, 'mensaje' => 'Ya existe un cliente con ese número.'];
+    }
+    $st = conexion()->prepare(
+        "INSERT INTO clientes (id_negocio, nombre, numero, zona, direccion, notas) VALUES (?, ?, ?, ?, ?, ?)"
+    );
+    $st->execute([$idNegocio, $nombre, $numero, trim($zona) ?: null, trim($direccion) ?: null, trim($notas) ?: null]);
+    return ['exito' => true, 'id' => (int)conexion()->lastInsertId()];
+}
+
+function borrar_cliente(int $idCliente, int $idNegocio): void {
+    conexion()->prepare("DELETE FROM clientes WHERE id = ? AND id_negocio = ?")->execute([$idCliente, $idNegocio]);
+}
+
+// ---------- Contexto para el agente (modo a domicilio) ----------
+
+// Bloque que se agrega al system prompt según QUIÉN escribe. Le dice al agente si el
+// cliente está registrado, su zona y días, y las reglas de seguridad/privacidad.
+// Devuelve '' si el negocio NO es a domicilio (no cambia nada).
+function bloque_contexto_domicilio(int $idNegocio, array $c, string $contacto): string {
+    if (empty($c['a_domicilio'])) return '';
+
+    $esWeb = stripos($contacto, 'web:') === 0;
+    $cli   = $esWeb ? null : buscar_cliente_por_numero($idNegocio, $contacto);
+
+    $t = "\nATENCIÓN A DOMICILIO: este negocio va a la casa del cliente.\n";
+
+    if ($cli) {
+        $zona = trim((string)($cli['zona'] ?? ''));
+        $t   .= 'El cliente que te escribe está REGISTRADO: ' . $cli['nombre'] . '.';
+        if ($zona !== '') {
+            $dias = dias_de_zona($idNegocio, $zona);
+            $lbls = $dias ? implode(', ', array_map(fn($d) => ucfirst($d), $dias)) : '(sin días configurados)';
+            $t   .= ' Zona "' . $zona . '", que se atiende: ' . $lbls . '.';
+            $t   .= ' Si pregunta "cuándo vienes por mi zona", dile esos días y ofrécele la próxima fecha. Al agendar, ofrece SOLO esos días.';
+        } else {
+            $t .= ' (sin zona asignada; ofrece según el horario normal).';
+        }
+        if (trim((string)($cli['direccion'] ?? '')) !== '') {
+            $t .= ' Su dirección ya está registrada, NO se la vuelvas a pedir.';
+        }
+        $t .= "\n";
+    } else {
+        $t .= 'Quien te escribe NO está registrado como cliente' . ($esWeb ? ' (además es el chat web, anónimo)' : '') . '. '
+            . 'NO agendes una visita a domicilio a alguien desconocido (es por SEGURIDAD). Puedes responder dudas generales '
+            . '(servicios, precios, zonas, horarios). Si quiere agendar, pídele nombre, WhatsApp, colonia y dirección, y usa '
+            . "escalar_a_humano para que el negocio lo registre y apruebe.\n";
+    }
+    $t .= "NUNCA reveles la dirección, el nombre ni datos de ningún otro cliente.\n";
+    return $t;
+}

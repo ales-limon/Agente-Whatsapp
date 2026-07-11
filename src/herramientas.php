@@ -204,9 +204,10 @@ function resolver_profesional(string $entrada, array $recursos): ?string {
     return null;
 }
 
-function se_traslapa(int $ini, int $fin, array $rangos): bool {
+// $buffer = colchón de traslado (min) que debe quedar libre entre citas (a domicilio).
+function se_traslapa(int $ini, int $fin, array $rangos, int $buffer = 0): bool {
     foreach ($rangos as [$a, $b]) {
-        if ($ini < $b && $a < $fin) return true;
+        if ($ini < $b + $buffer && $a - $buffer < $fin) return true;
     }
     return false;
 }
@@ -226,6 +227,25 @@ function registrar_cita(array $datos, ?string $contacto, int $idNegocio): string
     $hora     = normalizar_hora($horaTxt);
     if ($fecha === '' || $hora === '') {
         return 'NO REGISTRADA: falta la fecha o la hora. Pideselas al cliente.';
+    }
+
+    // Colchón de traslado entre citas (a domicilio); 0 = sin colchón.
+    $buffer = (int)($c['traslado_minutos'] ?? 0);
+
+    // Modo a domicilio: solo clientes registrados, y solo los días de su zona.
+    $direccionCli = null;
+    if (!empty($c['a_domicilio'])) {
+        $cli = buscar_cliente_por_numero($idNegocio, (string)($contacto ?? ''));
+        if (!$cli) {
+            return 'NO REGISTRADA: este cliente NO está en el directorio (servicio a domicilio). NO agendes a un desconocido: pídele nombre, WhatsApp, colonia y dirección, y usa escalar_a_humano para que el negocio lo registre y apruebe.';
+        }
+        $zdias   = dias_de_zona($idNegocio, (string)($cli['zona'] ?? ''));
+        $diaCita = nombre_dia($fecha);
+        if ($zdias && $diaCita !== null && !in_array($diaCita, $zdias, true)) {
+            $lbls = implode(', ', array_map(fn($d) => ucfirst($d), $zdias));
+            return 'NO REGISTRADA: el ' . $diaCita . ' no se atiende la zona de este cliente. Su zona ("' . ($cli['zona'] ?? '') . '") se atiende: ' . $lbls . '. Ofrece uno de esos días.';
+        }
+        $direccionCli = trim((string)($cli['direccion'] ?? '')) ?: null;
     }
 
     $hor = horario_del_dia($fecha, $c);
@@ -254,14 +274,14 @@ function registrar_cita(array $datos, ?string $contacto, int $idNegocio): string
             if ($prof === null) {
                 return 'NO REGISTRADA: "' . $profIn . '" no esta en el personal del negocio. El personal es: ' . implode(', ', $recursos) . '. Confirma con el cliente con quien quiere, o deja que el sistema asigne a quien este libre.';
             }
-            if (se_traslapa($ini, $fin, rangos_de_profesional($rangos, $prof))) {
+            if (se_traslapa($ini, $fin, rangos_de_profesional($rangos, $prof), $buffer)) {
                 return 'OCUPADO: ' . $prof . ' ya tiene una cita a esa hora. Ofrece al cliente otra hora con ' . $prof . ', u otra persona del personal. Usa consultar_disponibilidad. NO se registro nada.';
             }
             $profAsignado = $prof;
         } else {
             // Sin preferencia: asignar a la primera persona libre a esa hora
             foreach ($recursos as $r) {
-                if (!se_traslapa($ini, $fin, rangos_de_profesional($rangos, $r))) { $profAsignado = $r; break; }
+                if (!se_traslapa($ini, $fin, rangos_de_profesional($rangos, $r), $buffer)) { $profAsignado = $r; break; }
             }
             if ($profAsignado === null) {
                 return 'HORARIO OCUPADO: a esa hora todo el personal esta ocupado. Discúlpate y ofrece otro horario; usa consultar_disponibilidad. NO se registro nada.';
@@ -269,7 +289,7 @@ function registrar_cita(array $datos, ?string $contacto, int $idNegocio): string
         }
     } else {
         // Un solo lugar (comportamiento clasico)
-        if (se_traslapa($ini, $fin, rangos_de_profesional($rangos, null))) {
+        if (se_traslapa($ini, $fin, rangos_de_profesional($rangos, null), $buffer)) {
             return 'HORARIO OCUPADO: ese horario se encima con otra cita. Discúlpate y ofrece otro horario; usa consultar_disponibilidad para ver los libres. NO se registro nada.';
         }
     }
@@ -277,12 +297,12 @@ function registrar_cita(array $datos, ?string $contacto, int $idNegocio): string
     $dia = trim((string)($datos['dia'] ?? ''));
     if ($dia === '') $dia = $fecha;
 
-    $st = conexion()->prepare("INSERT INTO citas (id_negocio, nombre, servicio, profesional, fecha, dia_texto, hora, duracion, contacto, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente')");
-    $st->execute([$idNegocio, $nombre, $servicio, $profAsignado, $fecha, $dia, $horaTxt, $dur, $contacto ?? 'desconocido']);
+    $st = conexion()->prepare("INSERT INTO citas (id_negocio, nombre, servicio, profesional, direccion, fecha, dia_texto, hora, duracion, contacto, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente')");
+    $st->execute([$idNegocio, $nombre, $servicio, $profAsignado, $direccionCli, $fecha, $dia, $horaTxt, $dur, $contacto ?? 'desconocido']);
     $folio = (int)conexion()->lastInsertId();
 
     // Avisar al dueño por WhatsApp (si tiene número de avisos configurado).
-    avisar_cita_agendada($c, ['nombre' => $nombre, 'servicio' => $servicio, 'dia' => $dia, 'hora' => $horaTxt, 'profesional' => $profAsignado]);
+    avisar_cita_agendada($c, ['nombre' => $nombre, 'servicio' => $servicio, 'dia' => $dia, 'hora' => $horaTxt, 'profesional' => $profAsignado, 'direccion' => $direccionCli]);
 
     $conQuien = $profAsignado !== null ? ' con ' . $profAsignado : '';
     return 'Cita registrada con folio #' . $folio . ' (' . $dur . ' min)' . $conQuien . '. Confirma al cliente que una persona del negocio se la confirmara por este medio'
@@ -416,23 +436,24 @@ function reagendar_cita(array $datos, ?string $contacto, int $idNegocio): string
     }
 
     // Disponibilidad en el nuevo horario, EXCLUYENDO la propia cita (si no, choca consigo misma).
+    $buffer = (int)($c['traslado_minutos'] ?? 0);
     $rangos = rangos_ocupados($fecha, $c, $idNegocio, (int)$cita['id']);
     if ($recursos) {
         if ($prof !== '') {
-            if (se_traslapa($ini, $fin, rangos_de_profesional($rangos, $prof))) {
+            if (se_traslapa($ini, $fin, rangos_de_profesional($rangos, $prof), $buffer)) {
                 return 'OCUPADO: ' . $prof . ' ya tiene una cita a esa hora. Ofrece otra hora con ' . $prof . ', u otra persona del personal. NO se movio nada.';
             }
         } else {
             // La cita no tenia persona asignada: asignar a la primera libre.
             foreach ($recursos as $r) {
-                if (!se_traslapa($ini, $fin, rangos_de_profesional($rangos, $r))) { $prof = $r; break; }
+                if (!se_traslapa($ini, $fin, rangos_de_profesional($rangos, $r), $buffer)) { $prof = $r; break; }
             }
             if ($prof === '') {
                 return 'HORARIO OCUPADO: a esa hora todo el personal esta ocupado. Ofrece otro horario. NO se movio nada.';
             }
         }
     } else {
-        if (se_traslapa($ini, $fin, rangos_de_profesional($rangos, null))) {
+        if (se_traslapa($ini, $fin, rangos_de_profesional($rangos, null), $buffer)) {
             return 'HORARIO OCUPADO: ese horario se encima con otra cita. Ofrece otro horario. NO se movio nada.';
         }
     }
@@ -462,6 +483,20 @@ function consultar_disponibilidad(array $datos, ?string $contacto, int $idNegoci
         return 'El negocio NO abre el ' . $dia . ' (' . $fecha . '). Ofrece al cliente otro dia.';
     }
     [$abre, $cierra] = $hor;
+
+    $buffer = (int)($c['traslado_minutos'] ?? 0);
+    // Modo a domicilio: solo clientes registrados, y solo los días de su zona.
+    if (!empty($c['a_domicilio'])) {
+        $cli = buscar_cliente_por_numero($idNegocio, (string)($contacto ?? ''));
+        if (!$cli) {
+            return 'Este cliente NO está registrado para servicio a domicilio. NO le ofrezcas agenda: pídele nombre, WhatsApp, colonia y dirección, y usa escalar_a_humano para que el negocio lo registre.';
+        }
+        $zdias = dias_de_zona($idNegocio, (string)($cli['zona'] ?? ''));
+        if ($zdias && !in_array($dia, $zdias, true)) {
+            $lbls = implode(', ', array_map(fn($d) => ucfirst($d), $zdias));
+            return 'El ' . $dia . ' no se atiende la zona de este cliente. Su zona ("' . ($cli['zona'] ?? '') . '") se atiende: ' . $lbls . '. Ofrécele uno de esos días.';
+        }
+    }
 
     $intervalo = (int)($c['intervalo_minutos'] ?? 30);
     if ($intervalo < 5) $intervalo = 30;
@@ -497,7 +532,7 @@ function consultar_disponibilidad(array $datos, ?string $contacto, int $idNegoci
         if ($fecha === $hoy && $m <= $ahoraMin) continue;
         $hayAlguien = false;
         foreach ($agendas as $p) {
-            if (!se_traslapa($m, $m + $dur, rangos_de_profesional($rangos, $p))) { $hayAlguien = true; break; }
+            if (!se_traslapa($m, $m + $dur, rangos_de_profesional($rangos, $p), $buffer)) { $hayAlguien = true; break; }
         }
         if ($hayAlguien) $libres[] = min_a_hhmm($m);
     }
