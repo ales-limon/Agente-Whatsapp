@@ -13,13 +13,12 @@ if (!existe_superadmin()) {
 }
 
 function ir_segun_rol(): void {
+    // Superadmin (dueño de la plataforma): siempre a su panel, donde administra y
+    // entra a cualquier negocio. NO al menú "elige tu negocio" (ese es para clientes).
+    if (es_superadmin()) { header('Location: superadmin.php'); exit; }
+
+    // Admin (cliente): un solo negocio entra directo; varios PROPIOS muestran el menú.
     $negs = negocios_del_usuario();
-    if (es_superadmin()) {
-        // Con negocios dados de alta, ofrecemos el menú (panel de superadmin + negocios).
-        header('Location: ' . (count($negs) > 0 ? 'seleccionar.php' : 'superadmin.php'));
-        exit;
-    }
-    // Admin: un solo negocio entra directo; varios muestran el menú; ninguno vuelve al login.
     if (count($negs) === 1) { header('Location: panel.php?t=' . urlencode($negs[0]['slug'])); exit; }
     if (count($negs) >= 2)  { header('Location: seleccionar.php'); exit; }
     header('Location: login.php');

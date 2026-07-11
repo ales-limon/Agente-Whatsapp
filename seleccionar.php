@@ -7,12 +7,15 @@ require_once __DIR__ . '/src/auth.php';
 
 requiere_autenticacion();
 
-$esSuper = es_superadmin();
-$negs    = negocios_del_usuario();
+// El superadmin va a su panel (administra todo desde ahí). Este menú "elige tu negocio"
+// es SOLO para clientes que tienen varios negocios PROPIOS.
+if (es_superadmin()) { header('Location: superadmin.php'); exit; }
+
+$negs = negocios_del_usuario();
 
 // Sin nada que elegir: ruteo directo (no mostramos un menú de una sola opción).
-if (!$esSuper && count($negs) === 1) { header('Location: panel.php?t=' . urlencode($negs[0]['slug'])); exit; }
-if (!$esSuper && count($negs) === 0) { header('Location: login.php'); exit; }
+if (count($negs) === 1) { header('Location: panel.php?t=' . urlencode($negs[0]['slug'])); exit; }
+if (count($negs) === 0) { header('Location: login.php'); exit; }
 
 $u = usuario_actual();
 function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
@@ -54,18 +57,7 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
         <span class="marca__nombre">Agente de WhatsApp</span>
       </div>
       <h1>Hola, <?= h($u['nombre']) ?></h1>
-      <p class="sub">¿A dónde quieres ir?</p>
-
-      <?php if ($esSuper): ?>
-        <a class="opcion" href="superadmin.php">
-          <span class="opcion__ico"><i class="fas fa-user-shield"></i></span>
-          <span class="opcion__txt">
-            <span class="opcion__t">Panel de superadmin</span>
-            <span class="opcion__s">Administra todos los negocios y usuarios</span>
-          </span>
-          <span class="opcion__arrow"><i class="fas fa-chevron-right"></i></span>
-        </a>
-      <?php endif; ?>
+      <p class="sub">Elige el negocio al que quieres entrar.</p>
 
       <?php foreach ($negs as $n): ?>
         <a class="opcion" href="panel.php?t=<?= urlencode($n['slug']) ?>">
