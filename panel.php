@@ -103,6 +103,11 @@ $css = '
   .estado-prueba a { color: var(--marca); font-weight: 600; }
   .estado-prueba .barra { height: 7px; background: #fff; border-radius: 999px; overflow: hidden; margin: 10px 0 2px; max-width: 320px; }
   .estado-prueba .barra > span { display: block; height: 100%; background: var(--accion); }
+  .modal-fondo { position: fixed; inset: 0; background: rgba(10,27,34,.55); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+  .modal-caja { background: var(--superficie); border-radius: var(--radio); max-width: 420px; width: 100%; padding: 32px 28px; text-align: center; box-shadow: 0 18px 50px rgba(10,27,34,.28); }
+  .modal-caja .modal-icono { font-size: 32px; color: var(--accion); margin-bottom: 10px; }
+  .modal-caja h2 { font-family: var(--fuente-titulo); font-size: 20px; margin: 0 0 10px; color: var(--tinta); }
+  .modal-caja p { font-size: 14px; color: var(--texto-2); line-height: 1.55; margin: 0 0 22px; }
 ';
 layout_inicio('Citas', 'negocio', 'citas', ['negocio' => $negocio, 'css' => $css]);
 ?>
@@ -113,7 +118,18 @@ layout_inicio('Citas', 'negocio', 'citas', ['negocio' => $negocio, 'css' => $css
     $uso      = uso_mes($idNegocio);
     $usados   = (int)$uso['mensajes'];
     $limite   = (int)($negocio['limite_mensajes_mes'] ?? 0);
+    $pruebaAgotada = es_modo_prueba($negocio) && $limite > 0 && $usados >= $limite;
   ?>
+  <?php if ($pruebaAgotada): ?>
+    <div class="modal-fondo" id="modal-prueba">
+      <div class="modal-caja">
+        <div class="modal-icono"><i class="fas fa-hourglass-end"></i></div>
+        <h2>Tu prueba terminó</h2>
+        <p>Este asistente está en modo de prueba y alcanzó su límite (<?= $usados ?>/<?= $limite ?> mensajes). Para seguir usándolo, contrata un plan y activaremos tu asistente sin límite de prueba.</p>
+        <button type="button" class="btn btn--primario" onclick="document.getElementById('modal-prueba').style.display='none'">Entendido</button>
+      </div>
+    </div>
+  <?php endif; ?>
   <?php if (!$waActivo): ?>
     <div class="estado-prueba">
       <div class="estado-prueba__t"><i class="fas fa-flask"></i> Estás en modo prueba — WhatsApp aún no está activo</div>

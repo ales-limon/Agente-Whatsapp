@@ -23,6 +23,23 @@ function uso_mes(int $idNegocio, string $periodo = ''): array {
     return $r ?: ['mensajes' => 0, 'tokens_entrada' => 0, 'tokens_salida' => 0];
 }
 
+// ¿El negocio está en modo prueba? (aún no contrata: su tope es el de prueba).
+function es_modo_prueba(array $negocio): bool {
+    $lim     = (int)($negocio['limite_mensajes_mes'] ?? 0);
+    $prueba  = defined('LIMITE_PRUEBA') ? LIMITE_PRUEBA : 20;
+    return $lim > 0 && $lim <= $prueba;
+}
+
+// Mensaje de cortesía al cliente cuando el negocio alcanzó su límite. En prueba
+// invita a contratar; en plan de paga, avisa que lo atenderá una persona.
+function mensaje_limite(array $negocio): string {
+    if (es_modo_prueba($negocio)) {
+        return 'Este asistente está en modo de prueba y alcanzó su límite. Para seguir usándolo, contrata un plan.';
+    }
+    return 'Gracias por tu mensaje. En este momento no puedo atenderte de forma automática; una persona de '
+         . ($negocio['nombre'] ?? 'el negocio') . ' te responderá en breve.';
+}
+
 // ¿El negocio puede atender un mensaje más este mes?
 // limite_mensajes_mes = 0  =>  ilimitado (pilotos, dogfood).
 function dentro_de_limite(array $negocio): bool {

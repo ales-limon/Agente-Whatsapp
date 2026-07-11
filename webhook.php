@@ -80,10 +80,7 @@ if (handoff_activo($idNegocio, $from)) {
 //     para que el dueño lo vea y respondemos con cortesía. ---
 if (!dentro_de_limite($negocio)) {
     guardar_mensaje($idNegocio, $from, 'user', $cuerpo !== '' ? $cuerpo : '[multimedia]');
-    responder_whatsapp(
-        'Gracias por tu mensaje. En este momento no puedo atenderte de forma automática; '
-        . 'una persona de ' . $negocio['nombre'] . ' te responderá lo antes posible.'
-    );
+    responder_whatsapp(mensaje_limite($negocio));
     exit;
 }
 

@@ -58,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Tope de uso del plan: no gastamos IA si se alcanzó el límite del mes.
     if (!dentro_de_limite($negocio)) {
         guardar_mensaje($idNegocio, $contacto, 'user', $mensaje);
-        echo json_encode(['respuesta' => 'Gracias por tu mensaje. En este momento no puedo atenderte de forma automática; una persona de ' . $negocio['nombre'] . ' te responderá en breve.', 'ultimoId' => (int)conexion()->lastInsertId()], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['respuesta' => mensaje_limite($negocio), 'ultimoId' => (int)conexion()->lastInsertId()], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
