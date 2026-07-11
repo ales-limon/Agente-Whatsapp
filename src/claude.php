@@ -37,7 +37,7 @@ function llamar_claude_raw(string $apiKey, string $modelo, string $systemPrompt,
     return ['ok' => true, 'error' => '', 'codigo' => $codigo, 'data' => json_decode($respuesta, true) ?: []];
 }
 
-function responder_con_claude(string $systemPrompt, array $historial, string $mensajeUsuario, ?string $contacto, int $idNegocio, array &$uso = null): string {
+function responder_con_claude(string $systemPrompt, array $historial, string $mensajeUsuario, ?string $contacto, int $idNegocio, array &$uso = null, ?array $imagen = null): string {
     $uso = ['entrada' => 0, 'salida' => 0]; // tokens consumidos en esta respuesta (puede sumar varias vueltas de tool-use)
     $apiKey = env('ANTHROPIC_API_KEY');
     if (!$apiKey) {
@@ -52,7 +52,15 @@ function responder_con_claude(string $systemPrompt, array $historial, string $me
         $rol = (($m['role'] ?? '') === 'assistant') ? 'assistant' : 'user';
         $mensajes[] = ['role' => $rol, 'content' => (string)($m['content'] ?? '')];
     }
-    $mensajes[] = ['role' => 'user', 'content' => $mensajeUsuario];
+    if ($imagen && !empty($imagen['data'])) {
+        // Mensaje con imagen (visión): bloque de imagen + texto.
+        $mensajes[] = ['role' => 'user', 'content' => [
+            ['type' => 'image', 'source' => ['type' => 'base64', 'media_type' => $imagen['media_type'], 'data' => $imagen['data']]],
+            ['type' => 'text', 'text' => $mensajeUsuario !== '' ? $mensajeUsuario : 'El cliente envió esta imagen.'],
+        ]];
+    } else {
+        $mensajes[] = ['role' => 'user', 'content' => $mensajeUsuario];
+    }
 
     $tools = herramientas_disponibles();
 
