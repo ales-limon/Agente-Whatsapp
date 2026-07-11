@@ -59,8 +59,8 @@ function responder_whatsapp(string $texto): void {
 //     negocio y su mensaje pide claramente un corte/ingresos, respondemos con el
 //     resumen y NO lo tratamos como cliente. Se exige intencion de caja explicita
 //     para no estorbar cuando el dueño prueba el bot como cliente. ---
-$numAvisos = normalizar_numero((string)($negocio['numero_avisos'] ?? ''));
-if ($numAvisos !== '' && normalizar_numero($from) === $numAvisos && es_consulta_caja($cuerpo)) {
+$numAvisos = trim((string)($negocio['numero_avisos'] ?? ''));
+if ($numAvisos !== '' && mismo_numero($from, $numAvisos) && es_consulta_caja($cuerpo)) {
     responder_whatsapp(corte_texto($idNegocio, periodo_de_texto($cuerpo)));
     exit;
 }

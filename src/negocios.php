@@ -15,6 +15,16 @@ function normalizar_numero(string $n): string {
     return trim(str_replace(['whatsapp:', ' '], '', $n));
 }
 
+// Compara dos numeros de WhatsApp por sus ULTIMOS 10 digitos (el numero local real).
+// Asi ignora "+", lada 52, el "1" de mexico (+52 vs +521), espacios y el prefijo
+// "whatsapp:". Robusto para saber si dos formatos distintos son la misma persona.
+function mismo_numero(string $a, string $b): bool {
+    $da = preg_replace('/\D/', '', $a);
+    $db = preg_replace('/\D/', '', $b);
+    if (strlen($da) < 10 || strlen($db) < 10) return false;
+    return substr($da, -10) === substr($db, -10);
+}
+
 function negocio_por_slug(string $slug): ?array {
     $st = conexion()->prepare("SELECT * FROM negocios WHERE slug = ? AND activo = 1");
     $st->execute([$slug]);
