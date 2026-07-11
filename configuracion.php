@@ -277,7 +277,7 @@ layout_inicio('Configuración', 'negocio', 'config', ['negocio' => $negocio, 'cs
     <div class="tab-panel" data-panel="zonas">
       <div class="seccion">
         <h2>Zonas de atención</h2>
-        <p style="font-size:13px;color:var(--texto-2);margin:0 0 14px;">Crea tus zonas y marca <strong>qué días</strong> atiendes cada una. El agente ofrecerá a cada cliente solo los días de <em>su</em> zona. (El cliente se asigna a una zona en el <a href="clientes.php?t=<?= h($negocio['slug']) ?>">Directorio de clientes</a>.)</p>
+        <p style="font-size:13px;color:var(--texto-2);margin:0 0 14px;">Crea tus zonas y marca <strong>qué días</strong> atiendes cada una. El agente ofrecerá a cada cliente solo los días de <em>su</em> zona. (El cliente se asigna a una zona en el <a href="clientes.php?t=<?= urlencode($negocio['slug']) ?>">Directorio de clientes</a>.)</p>
         <div id="zonas-cont">
           <?php foreach ($zonas as $i => $z): ?>
             <div class="zona-fila" data-i="<?= (int)$i ?>">
