@@ -91,7 +91,8 @@ layout_inicio('Negocios', 'superadmin', 'negocios', ['css' => $css]);
           </td>
           <td>
             <?= (int)$u['mensajes'] ?> msj<?= $lim > 0 ? ' / ' . $lim : '' ?><br>
-            <span class="neg-slug"><?= number_format((int)$u['tokens_entrada'] + (int)$u['tokens_salida']) ?> tokens<?= $lim > 0 ? '' : ' · ilimitado' ?></span>
+            <span class="neg-slug"><?= number_format((int)$u['tokens_entrada'] + (int)$u['tokens_salida']) ?> tokens<?= $lim > 0 ? '' : ' · ilimitado' ?></span><br>
+            <span class="neg-slug" title="Costo estimado de Claude este mes (no incluye Twilio)">Claude: <?= h(formato_costo_usd(costo_estimado_usd((int)$u['tokens_entrada'], (int)$u['tokens_salida']))) ?></span>
           </td>
           <td>
             <form method="post" class="ajustes">

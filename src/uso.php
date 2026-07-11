@@ -32,6 +32,22 @@ function dentro_de_limite(array $negocio): bool {
     return (int)$uso['mensajes'] < $limite;
 }
 
+// Costo estimado en USD del consumo de Claude (modelo Haiku 4.5).
+// Precios oficiales: entrada $1.00 / 1M tokens, salida $5.00 / 1M tokens.
+// Solo cubre el costo de la IA; NO incluye la tarifa de Twilio/WhatsApp.
+define('PRECIO_ENTRADA_POR_MTOK', 1.00);
+define('PRECIO_SALIDA_POR_MTOK', 5.00);
+function costo_estimado_usd(int $tokensEntrada, int $tokensSalida): float {
+    return $tokensEntrada / 1000000 * PRECIO_ENTRADA_POR_MTOK
+         + $tokensSalida  / 1000000 * PRECIO_SALIDA_POR_MTOK;
+}
+
+// Formatea un costo en USD para mostrar: "<$0.01" para importes menores a un centavo.
+function formato_costo_usd(float $usd): string {
+    if ($usd > 0 && $usd < 0.01) return '<$0.01 USD';
+    return '$' . number_format($usd, 2) . ' USD';
+}
+
 // Suma 1 mensaje atendido y los tokens consumidos al periodo actual del negocio.
 // Crea la fila del mes la primera vez (UPSERT).
 function registrar_uso(int $idNegocio, int $tokensEntrada = 0, int $tokensSalida = 0): void {
