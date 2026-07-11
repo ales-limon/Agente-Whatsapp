@@ -163,7 +163,7 @@ layout_inicio('Configuración', 'negocio', 'config', ['negocio' => $negocio, 'cs
         </div>
         <div class="grupo">
           <label>Número para recibir avisos de citas (tu WhatsApp)</label>
-          <input type="text" name="numero_avisos" value="<?= val($c, 'numero_avisos') ?>" placeholder="+5213334588268">
+          <input type="text" name="numero_avisos" value="<?= val($c, 'numero_avisos') ?>" placeholder="+5215512345678">
           <div class="hint">Cuando se agende una cita, te llega un aviso por WhatsApp aquí. Usa formato internacional, ej. +52...</div>
         </div>
         <div class="grupo">
