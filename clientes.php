@@ -43,11 +43,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $zonas    = listar_zonas($idNegocio);
 $clientes = listar_clientes($idNegocio);
-// Mapa CP -> nombre de zona, para autodetectar la zona al elegir una colonia.
-$zonaPorCp = [];
+// Colonias que ya están asignadas a alguna zona: el buscador del directorio solo
+// ofrece estas (no todo el catálogo), así el cliente siempre cae en una zona.
+$coloniasZonas = [];
 foreach ($zonas as $z) {
     foreach ($z['colonias'] as $col) {
-        if (!empty($col['cp'])) $zonaPorCp[(string)$col['cp']] = $z['nombre'];
+        $coloniasZonas[] = [
+            'cp'        => (string)($col['cp'] ?? ''),
+            'colonia'   => (string)($col['colonia'] ?? ''),
+            'municipio' => (string)($col['municipio'] ?? ''),
+            'zona'      => $z['nombre'],
+        ];
     }
 }
 function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
@@ -74,6 +80,7 @@ $css = '
   .col-op:last-child { border-bottom: 0; }
   .col-op:hover { background: var(--badge-bg); }
   .col-op small { color: var(--texto-2); }
+  .col-vacio { padding: 9px 11px; font-size: 12px; color: var(--texto-2); }
 ';
 
 layout_inicio('Clientes', 'negocio', 'clientes', ['negocio' => $negocio, 'css' => $css]);
@@ -158,39 +165,43 @@ layout_inicio('Clientes', 'negocio', 'clientes', ['negocio' => $negocio, 'css' =
     });
   }
 
-  // Buscador de colonias (SEPOMEX) con autocompletado + auto-selección de zona.
-  var ZONA_POR_CP = <?= json_encode($zonaPorCp, JSON_UNESCAPED_UNICODE) ?>;
+  // Buscador de colonias: solo entre las que ya están asignadas a una zona.
+  // Al elegir una, se rellena colonia+CP y se selecciona su zona automáticamente.
+  var COLS_ZONA = <?= json_encode($coloniasZonas, JSON_UNESCAPED_UNICODE) ?>;
   (function () {
     var inp = document.getElementById('col-buscar');
     var sug = document.getElementById('col-sug');
     if (!inp) return;
-    var timer;
     inp.addEventListener('input', function () {
-      clearTimeout(timer);
       document.getElementById('col-nombre').value = '';
       document.getElementById('col-cp').value = '';
       var qq = this.value.trim();
-      if (qq.length < 3) { sug.innerHTML = ''; return; }
-      timer = setTimeout(function () {
-        fetch('buscar_colonia.php?q=' + encodeURIComponent(qq))
-          .then(function (r) { return r.json(); })
-          .then(function (list) {
-            sug.innerHTML = (list || []).map(function (c) {
-              return '<div class="col-op" data-cp="' + c.cp + '" data-col="' + String(c.colonia).replace(/"/g, '&quot;') + '">' +
-                c.colonia + ' <small>— ' + c.municipio + ', CP ' + c.cp + '</small></div>';
-            }).join('');
-          }).catch(function () { sug.innerHTML = ''; });
-      }, 250);
+      if (qq.length < 2) { sug.innerHTML = ''; return; }
+      var qn = qq.toLowerCase();
+      var esNum = /^\d+$/.test(qq);
+      var res = COLS_ZONA.filter(function (c) {
+        return esNum ? String(c.cp).indexOf(qq) === 0 : String(c.colonia).toLowerCase().indexOf(qn) !== -1;
+      }).slice(0, 12);
+      if (!res.length) {
+        sug.innerHTML = '<div class="col-vacio">' + (COLS_ZONA.length
+          ? 'Sin coincidencias en tus zonas.'
+          : 'Aún no hay colonias en tus zonas. Agrégalas en Configuración → Zonas.') + '</div>';
+        return;
+      }
+      sug.innerHTML = res.map(function (c) {
+        return '<div class="col-op" data-cp="' + c.cp + '" data-col="' + String(c.colonia).replace(/"/g, '&quot;') + '" data-zona="' + String(c.zona).replace(/"/g, '&quot;') + '">' +
+          c.colonia + ' <small>— ' + c.municipio + ', CP ' + c.cp + ' · ' + c.zona + '</small></div>';
+      }).join('');
     });
     sug.addEventListener('click', function (e) {
       var op = e.target.closest('.col-op'); if (!op) return;
-      var cp = op.getAttribute('data-cp'), col = op.getAttribute('data-col');
+      var cp = op.getAttribute('data-cp'), col = op.getAttribute('data-col'), zona = op.getAttribute('data-zona');
       document.getElementById('col-nombre').value = col;
       document.getElementById('col-cp').value = cp;
       inp.value = col + ' (CP ' + cp + ')';
       sug.innerHTML = '';
-      var z = ZONA_POR_CP[cp];
-      if (z) { var sel = document.getElementById('sel-zona'); if (sel) { for (var i = 0; i < sel.options.length; i++) { if (sel.options[i].value === z) { sel.selectedIndex = i; break; } } } }
+      var sel = document.getElementById('sel-zona');
+      if (sel && zona) { for (var i = 0; i < sel.options.length; i++) { if (sel.options[i].value === zona) { sel.selectedIndex = i; break; } } }
     });
     document.addEventListener('click', function (e) { if (!inp.contains(e.target) && !sug.contains(e.target)) sug.innerHTML = ''; });
   })();
