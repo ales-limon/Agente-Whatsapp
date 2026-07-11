@@ -110,6 +110,7 @@ layout_inicio('Citas', 'negocio', 'citas', ['negocio' => $negocio, 'css' => $css
 
   <?php
     $waActivo = trim((string)($negocio['numero_whatsapp'] ?? '')) !== '';
+    $uso      = uso_mes($idNegocio);
     $usados   = (int)$uso['mensajes'];
     $limite   = (int)($negocio['limite_mensajes_mes'] ?? 0);
   ?>
