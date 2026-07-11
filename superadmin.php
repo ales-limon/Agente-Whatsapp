@@ -90,9 +90,14 @@ layout_inicio('Negocios', 'superadmin', 'negocios', ['css' => $css]);
             <div class="neg-slug"><?= $slug ?></div>
           </td>
           <td>
+            <?php
+              $cClaude = costo_estimado_usd((int)$u['tokens_entrada'], (int)$u['tokens_salida']);
+              $cTwilio = costo_twilio_estimado((int)$u['mensajes']);
+            ?>
             <?= (int)$u['mensajes'] ?> msj<?= $lim > 0 ? ' / ' . $lim : '' ?><br>
             <span class="neg-slug"><?= number_format((int)$u['tokens_entrada'] + (int)$u['tokens_salida']) ?> tokens<?= $lim > 0 ? '' : ' · ilimitado' ?></span><br>
-            <span class="neg-slug" title="Costo estimado de Claude este mes (no incluye Twilio)">Claude: <?= h(formato_costo_usd(costo_estimado_usd((int)$u['tokens_entrada'], (int)$u['tokens_salida']))) ?></span>
+            <span class="neg-slug" title="Estimado del mes. El total exacto de Twilio está en la consola (Monitor > Usage).">Claude <?= h(formato_costo_usd($cClaude)) ?> · Twilio <?= h(formato_costo_usd($cTwilio)) ?></span><br>
+            <span class="neg-slug" style="font-weight:600; color:var(--tinta);">Total est.: <?= h(formato_costo_usd($cClaude + $cTwilio)) ?></span>
           </td>
           <td>
             <form method="post" class="ajustes">

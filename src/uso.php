@@ -48,6 +48,15 @@ function formato_costo_usd(float $usd): string {
     return '$' . number_format($usd, 2) . ' USD';
 }
 
+// Costo estimado de Twilio+Meta (WhatsApp) por mensaje atendido. Es una tarifa
+// COMBINADA y aproximada (varía por país y con el tiempo). Sirve para ver el gasto
+// por negocio; el total EXACTO está en la consola de Twilio (Monitor > Usage).
+// Ajustable aquí si tu tarifa real cambia.
+define('PRECIO_TWILIO_POR_MENSAJE', 0.008);
+function costo_twilio_estimado(int $mensajes): float {
+    return $mensajes * PRECIO_TWILIO_POR_MENSAJE;
+}
+
 // Suma 1 mensaje atendido y los tokens consumidos al periodo actual del negocio.
 // Crea la fila del mes la primera vez (UPSERT).
 function registrar_uso(int $idNegocio, int $tokensEntrada = 0, int $tokensSalida = 0): void {
