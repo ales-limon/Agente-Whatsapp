@@ -75,6 +75,10 @@ CREATE TABLE IF NOT EXISTS citas (
   contacto VARCHAR(80) NULL,
   estado VARCHAR(20) NOT NULL DEFAULT 'pendiente',
   recordado_en DATETIME NULL,
+  pagado TINYINT(1) NOT NULL DEFAULT 0,
+  metodo_pago VARCHAR(20) NULL,
+  monto_cobrado DECIMAL(10,2) NULL,
+  pagado_en DATETIME NULL,
   creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   KEY idx_negocio_fecha (id_negocio, fecha),
   FOREIGN KEY (id_negocio) REFERENCES negocios(id) ON DELETE CASCADE

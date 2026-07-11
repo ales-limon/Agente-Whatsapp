@@ -60,6 +60,14 @@ if (!$colExiste('negocios', 'recordatorio_horas_antes')) {
     $pdo->exec("ALTER TABLE negocios ADD COLUMN recordatorio_horas_antes INT NOT NULL DEFAULT 0 AFTER limite_mensajes_mes");
     echo "Columna negocios.recordatorio_horas_antes agregada.\n";
 }
+foreach ([
+    'pagado'        => "ALTER TABLE citas ADD COLUMN pagado TINYINT(1) NOT NULL DEFAULT 0 AFTER estado",
+    'metodo_pago'   => "ALTER TABLE citas ADD COLUMN metodo_pago VARCHAR(20) NULL AFTER pagado",
+    'monto_cobrado' => "ALTER TABLE citas ADD COLUMN monto_cobrado DECIMAL(10,2) NULL AFTER metodo_pago",
+    'pagado_en'     => "ALTER TABLE citas ADD COLUMN pagado_en DATETIME NULL AFTER monto_cobrado",
+] as $col => $sql) {
+    if (!$colExiste('citas', $col)) { $pdo->exec($sql); echo "Columna citas.$col agregada.\n"; }
+}
 
 // Backfill del enlace usuario-negocio desde la columna usuarios.id_negocio (idempotente).
 $pdo->exec("INSERT IGNORE INTO usuario_negocio (id_usuario, id_negocio)

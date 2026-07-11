@@ -31,6 +31,7 @@ function layout_inicio(string $titulo, string $contexto, string $activo, array $
         $items = [
             ['citas',  "panel.php?t=$slug",          'fa-calendar-check', 'Citas'],
             ['agenda', "agenda.php?t=$slug",         'fa-calendar-days',  'Agenda'],
+            ['caja',   "caja.php?t=$slug",           'fa-cash-register',  'Caja'],
             ['config', "configuracion.php?t=$slug",  'fa-sliders',        'Configuración'],
             ['chat',   "chat.php?t=$slug",           'fa-comment-dots',   'Probar chat'],
         ];
