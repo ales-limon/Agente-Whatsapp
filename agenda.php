@@ -104,6 +104,15 @@ $css = <<<CSS
   .fc .fc-day-today { background: var(--badge-bg) !important; }
   .fc-event { cursor: pointer; padding: 1px 3px; font-size: 12px; }
   .agenda-info { font-size: 13px; color: var(--texto-2); margin: 0 0 14px; }
+  /* Teléfono: apilar la barra del calendario y compactar para que no se encime */
+  @media (max-width: 640px) {
+    #cal-wrap { padding: 10px; }
+    .fc .fc-toolbar.fc-header-toolbar { flex-direction: column; align-items: stretch; gap: 8px; margin-bottom: 12px; }
+    .fc .fc-toolbar-chunk { display: flex; justify-content: center; }
+    .fc .fc-toolbar-title { font-size: 16px; text-align: center; }
+    .fc .fc-button { padding: 5px 9px; font-size: 13px; }
+    .fc .fc-event { font-size: 12.5px; }
+  }
 CSS;
 
 layout_inicio('Agenda', 'negocio', 'agenda', ['negocio' => $negocio, 'css' => $css]);
@@ -117,15 +126,17 @@ layout_inicio('Agenda', 'negocio', 'agenda', ['negocio' => $negocio, 'css' => $c
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     var el = document.getElementById('calendario');
+    // En teléfono arrancamos en vista LISTA (una lista de citas, ideal para pantalla
+    // chica) con una barra más simple; en escritorio, el calendario de Mes completo.
+    var esMovil = window.matchMedia('(max-width: 640px)').matches;
     var cal = new FullCalendar.Calendar(el, {
       locale: 'es',
-      initialView: 'dayGridMonth',
-      headerToolbar: {
-        left: 'prev,next today',
-        center: 'title',
-        right: 'dayGridMonth,timeGridWeek,timeGridDay'
-      },
-      buttonText: { today: 'Hoy', month: 'Mes', week: 'Semana', day: 'Día' },
+      initialView: esMovil ? 'listWeek' : 'dayGridMonth',
+      headerToolbar: esMovil
+        ? { left: 'prev,next today', center: 'title', right: 'listWeek,dayGridMonth' }
+        : { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay' },
+      buttonText: { today: 'Hoy', month: 'Mes', week: 'Semana', day: 'Día', list: 'Lista' },
+      noEventsText: 'No hay citas en este rango',
       nowIndicator: true,
       slotMinTime: '07:00:00',
       slotMaxTime: '21:00:00',
