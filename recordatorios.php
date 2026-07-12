@@ -20,6 +20,10 @@ require_once __DIR__ . '/src/conocimiento.php';
 require_once __DIR__ . '/src/notificaciones.php';
 cargar_entorno();
 
+// Modo prueba: "php recordatorios.php --dry" muestra qué recordatorios se
+// enviarían (y a quién) SIN enviar nada ni marcar recordado_en.
+$dry = in_array('--dry', $argv ?? [], true);
+
 $pdo   = conexion();
 $ahora = time();
 
@@ -59,6 +63,12 @@ foreach ($negocios as $n) {
         // Enviar solo si la cita esta dentro de la ventana [ahora, ahora + horas].
         if ($ts <= $ahora || $ts > $limite) continue;
 
+        if ($dry) {
+            echo "  [DRY] cita #{$cita['id']} negocio $idNegocio -> {$contacto} | {$cita['servicio']} {$cita['fecha']} {$hora} | cita en " . round(($ts - $ahora) / 3600, 1) . "h\n";
+            $enviados++;
+            continue;
+        }
+
         if (avisar_recordatorio_cliente($c, $cita)) {
             $pdo->prepare("UPDATE citas SET recordado_en = NOW() WHERE id = ?")->execute([(int)$cita['id']]);
             $enviados++;
@@ -66,4 +76,5 @@ foreach ($negocios as $n) {
     }
 }
 
-echo date('Y-m-d H:i:s') . " | negocios: " . count($negocios) . " | citas revisadas: $revisados | recordatorios enviados: $enviados\n";
+$etiqueta = $dry ? 'recordatorios que SE ENVIARIAN (dry-run)' : 'recordatorios enviados';
+echo date('Y-m-d H:i:s') . " | negocios: " . count($negocios) . " | citas revisadas: $revisados | $etiqueta: $enviados\n";
