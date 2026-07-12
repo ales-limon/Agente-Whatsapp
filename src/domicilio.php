@@ -148,15 +148,26 @@ function aprobar_cliente(int $idCliente, int $idNegocio): void {
 // Dada una colonia (por su nombre), busca en las zonas del negocio a cuál pertenece.
 // Devuelve ['zona','cp'] si la encuentra, o null. Sirve para autoasignar zona al
 // registrar un cliente nuevo desde el agente.
+// 1) Match directo por nombre de colonia en las zonas.
+// 2) Si no, busca la colonia en el catálogo SEPOMEX, obtiene su CP y ve si ese CP
+//    pertenece a alguna zona (match por código postal aunque el nombre no sea idéntico).
 function zona_de_colonia(int $idNegocio, string $colonia): ?array {
     $b = mb_strtolower(trim($colonia), 'UTF-8');
     if ($b === '') return null;
+
     foreach (listar_zonas($idNegocio) as $z) {
         foreach ($z['colonias'] as $col) {
             if (mb_strtolower((string)($col['colonia'] ?? ''), 'UTF-8') === $b) {
                 return ['zona' => $z['nombre'], 'cp' => (string)($col['cp'] ?? '')];
             }
         }
+    }
+
+    foreach (buscar_colonias($colonia, 10) as $cand) {
+        $cp = (string)($cand['cp'] ?? '');
+        if ($cp === '') continue;
+        $z = zona_de_cp($idNegocio, $cp);
+        if ($z) return ['zona' => $z['nombre'], 'cp' => $cp];
     }
     return null;
 }

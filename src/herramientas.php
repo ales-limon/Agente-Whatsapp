@@ -86,6 +86,7 @@ function herramientas_disponibles(): array {
                 'properties' => [
                     'nombre'    => ['type' => 'string', 'description' => 'Nombre completo del cliente (nombre y al menos un apellido)'],
                     'colonia'   => ['type' => 'string', 'description' => 'Colonia donde vive el cliente'],
+                    'cp'        => ['type' => 'string', 'description' => 'OPCIONAL. Codigo postal (5 digitos) si el cliente lo menciona; ayuda a asignarle la zona correcta.'],
                     'direccion' => ['type' => 'string', 'description' => 'Direccion: calle, numero y referencias'],
                 ],
                 'required' => ['nombre', 'colonia', 'direccion'],
@@ -595,10 +596,17 @@ function registrar_cliente_domicilio(array $datos, ?string $contacto, int $idNeg
         return 'Este cliente ya esta registrado y en espera de aprobacion. Dile que en cuanto el negocio lo apruebe podra agendar.';
     }
 
-    // Autoasignar zona/cp si la colonia coincide con alguna zona del negocio.
-    $zc   = zona_de_colonia($idNegocio, $colonia);
+    // Autoasignar zona/cp: primero por CP si el cliente lo dio, luego por colonia
+    // (que a su vez intenta match por nombre y, si no, por CP vía catálogo SEPOMEX).
+    $cpIn = trim((string)($datos['cp'] ?? ''));
+    $zc   = null;
+    if ($cpIn !== '') {
+        $z = zona_de_cp($idNegocio, $cpIn);
+        if ($z) $zc = ['zona' => $z['nombre'], 'cp' => $cpIn];
+    }
+    if (!$zc) $zc = zona_de_colonia($idNegocio, $colonia);
     $zona = $zc['zona'] ?? '';
-    $cp   = $zc['cp'] ?? '';
+    $cp   = $zc['cp'] ?? $cpIn;
 
     $r = crear_cliente($idNegocio, $nombre, $contacto, $zona, $colonia, $cp, $direccion, '', 0); // aprobado=0
     if (empty($r['exito'])) {
