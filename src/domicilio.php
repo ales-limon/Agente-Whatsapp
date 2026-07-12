@@ -301,9 +301,9 @@ function bloque_contexto_domicilio(int $idNegocio, array $c, string $contacto): 
         $t .= 'CLIENTE NO IDENTIFICADO: quien te escribe NO está en el directorio'
             . ($esWeb ? ' (es el chat web, anónimo: no se puede identificar por número, así que NO puedes registrarlo; si quiere agendar, pídele que te escriba por WhatsApp o usa escalar_a_humano).' : ' (su número no está registrado).')
             . " Por SEGURIDAD no puedes agendarle una visita a domicilio todavía.\n"
-            . "IMPORTANTE - NO lo lleves por el flujo normal de agendar (NO le pidas servicio/día/hora como si fueras a registrar la cita). En su lugar:\n"
+            . "IMPORTANTE - NO lo lleves por el flujo normal de agendar. En su lugar:\n"
             . "1) Puedes responder dudas generales (servicios, precios, en qué zonas y qué días atiende el negocio).\n"
-            . "2) En cuanto quiera agendar, dile con calidez que para atenderlo a domicilio primero necesitas registrarlo, y pídele EN UN SOLO MENSAJE: nombre completo, colonia y dirección (su WhatsApp ya lo tienes).\n"
+            . "2) En cuanto diga que quiere una cita, tu PRIMERA respuesta debe ser pedirle EN UN SOLO MENSAJE: su nombre completo, su colonia y su dirección (para registrarlo; su WhatsApp ya lo tienes). NO le preguntes qué servicio ni qué día/hora quiere: ese cuestionario es SOLO para clientes ya aprobados. A un cliente no registrado NO le corras el flujo de agendado; ve directo a pedir esos 3 datos.\n"
             . "3) Cuando te dé esos datos, LLAMA a la herramienta registrar_cliente_domicilio (nombre, colonia, direccion). Solo entonces queda registrado. Después dile que su registro quedó en revisión y que en cuanto el negocio lo apruebe podrá agendar.\n"
             . "PROHIBIDO: NUNCA le digas que 'está en proceso de aprobación', que 'ya está registrado' o que 'lo contactarán' ANTES de haber llamado con éxito a registrar_cliente_domicilio. Antes de esa llamada, este cliente NO existe en el sistema. Y NUNCA uses registrar_cita con un cliente no identificado.\n";
     }
