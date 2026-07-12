@@ -38,6 +38,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($accion === 'borrar_cliente') {
         borrar_cliente((int)($_POST['id'] ?? 0), $idNegocio);
         $mensaje = 'Cliente eliminado.';
+    } elseif ($accion === 'aprobar_cliente') {
+        aprobar_cliente((int)($_POST['id'] ?? 0), $idNegocio);
+        $mensaje = 'Cliente aprobado. Ya puede agendar a domicilio.';
     }
 }
 
@@ -85,6 +88,9 @@ $css = '
   .col-op:hover { background: var(--badge-bg); }
   .col-op small { color: var(--texto-2); }
   .col-vacio { padding: 9px 11px; font-size: 12px; color: var(--texto-2); }
+  .pill-aprobar { display: inline-flex; align-items: center; gap: 5px; background: #FDF3D6; color: #8A6D1B; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; margin-left: 6px; vertical-align: middle; }
+  .fila-pendiente td { background: #FFFBF0; }
+  .btn-aprobar { padding: 5px 10px; font-size: 12px; margin-right: 8px; }
 ';
 
 layout_inicio('Clientes', 'negocio', 'clientes', ['negocio' => $negocio, 'css' => $css]);
@@ -130,13 +136,22 @@ layout_inicio('Clientes', 'negocio', 'clientes', ['negocio' => $negocio, 'css' =
       <tbody>
       <?php foreach ($clientes as $cl): ?>
         <?php $urlFicha = 'cliente.php?id=' . (int)$cl['id'] . '&t=' . urlencode($negocio['slug']); ?>
-        <tr data-buscar="<?= h(mb_strtolower($cl['nombre'] . ' ' . $cl['numero'] . ' ' . ($cl['zona'] ?? '') . ' ' . ($cl['direccion'] ?? ''), 'UTF-8')) ?>">
-          <td><a href="<?= h($urlFicha) ?>" class="cli-nombre"><?= h($cl['nombre']) ?></a></td>
+        <?php $porAprobar = (int)($cl['aprobado'] ?? 1) !== 1; ?>
+        <tr data-buscar="<?= h(mb_strtolower($cl['nombre'] . ' ' . $cl['numero'] . ' ' . ($cl['zona'] ?? '') . ' ' . ($cl['direccion'] ?? ''), 'UTF-8')) ?>"<?= $porAprobar ? ' class="fila-pendiente"' : '' ?>>
+          <td><a href="<?= h($urlFicha) ?>" class="cli-nombre"><?= h($cl['nombre']) ?></a><?= $porAprobar ? ' <span class="pill-aprobar"><i class="fas fa-clock"></i> Por aprobar</span>' : '' ?></td>
           <td><?= h($cl['numero']) ?></td>
           <td><?= $cl['zona'] ? '<span class="pill-zona">' . h($cl['zona']) . '</span>' : '<span style="color:var(--texto-2)">—</span>' ?></td>
           <td><?= h($cl['direccion']) ?: '<span style="color:var(--texto-2)">—</span>' ?></td>
           <td><?= h($cl['notas']) ?: '<span style="color:var(--texto-2)">—</span>' ?></td>
           <td style="text-align:right; white-space:nowrap;">
+            <?php if ($porAprobar): ?>
+              <form method="post" style="display:inline;">
+                <?= campo_csrf() ?>
+                <input type="hidden" name="accion" value="aprobar_cliente">
+                <input type="hidden" name="id" value="<?= (int)$cl['id'] ?>">
+                <button class="btn btn--primario btn-aprobar" type="submit"><i class="fas fa-check"></i> Aprobar</button>
+              </form>
+            <?php endif; ?>
             <a href="<?= h($urlFicha) ?>" class="cli-editar" title="Ver ficha y editar"><i class="fas fa-pen"></i></a>
             <form method="post" style="display:inline;" onsubmit="return confirm('¿Eliminar a este cliente?');">
               <?= campo_csrf() ?>

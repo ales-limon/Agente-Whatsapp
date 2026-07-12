@@ -79,6 +79,19 @@ function herramientas_disponibles(): array {
             ],
         ],
         [
+            'name'        => 'registrar_cliente_domicilio',
+            'description' => 'SOLO para negocios a domicilio: registra a un cliente NUEVO (que aun no esta en el directorio) como "por aprobar", para que el dueño lo apruebe y despues pueda agendar directamente. Usala cuando un numero desconocido quiera agendar a domicilio y ya te haya dado su nombre completo, su colonia y su direccion. NO agenda ninguna cita: solo deja el registro pendiente y avisa al negocio.',
+            'input_schema' => [
+                'type'       => 'object',
+                'properties' => [
+                    'nombre'    => ['type' => 'string', 'description' => 'Nombre completo del cliente (nombre y al menos un apellido)'],
+                    'colonia'   => ['type' => 'string', 'description' => 'Colonia donde vive el cliente'],
+                    'direccion' => ['type' => 'string', 'description' => 'Direccion: calle, numero y referencias'],
+                ],
+                'required' => ['nombre', 'colonia', 'direccion'],
+            ],
+        ],
+        [
             'name'        => 'escalar_a_humano',
             'description' => 'Pasa la conversacion a una persona del negocio. Usala cuando el cliente pida explicitamente hablar con una persona/humano, o cuando no puedas resolver lo que necesita con la informacion y herramientas disponibles. Al llamarla, el negocio recibe un aviso y tu DEJAS de atender a este cliente hasta que una persona lo retome. Despues de llamarla, avisa al cliente con calidez que en breve lo contactara una persona del negocio.',
             'input_schema' => [
@@ -99,6 +112,7 @@ function ejecutar_herramienta(string $nombre, array $input, ?string $contacto, i
         case 'consultar_disponibilidad': return consultar_disponibilidad($input, $contacto, $idNegocio);
         case 'cancelar_cita':            return cancelar_cita($input, $contacto, $idNegocio);
         case 'reagendar_cita':           return reagendar_cita($input, $contacto, $idNegocio);
+        case 'registrar_cliente_domicilio': return registrar_cliente_domicilio($input, $contacto, $idNegocio);
         case 'escalar_a_humano':         return escalar_a_humano($input, $contacto, $idNegocio);
         default:                         return 'Herramienta no reconocida.';
     }
@@ -238,7 +252,10 @@ function registrar_cita(array $datos, ?string $contacto, int $idNegocio): string
     if (!empty($c['a_domicilio'])) {
         $cli = buscar_cliente_por_numero($idNegocio, (string)($contacto ?? ''));
         if (!$cli) {
-            return 'NO REGISTRADA: este cliente NO está en el directorio (servicio a domicilio). NO agendes a un desconocido: pídele nombre, WhatsApp, colonia y dirección, y usa escalar_a_humano para que el negocio lo registre y apruebe.';
+            return 'NO REGISTRADA: este cliente NO está en el directorio (servicio a domicilio). NO agendes a un desconocido: pídele nombre completo, colonia y dirección, y usa registrar_cliente_domicilio para dejarlo "por aprobar".';
+        }
+        if ((int)($cli['aprobado'] ?? 1) !== 1) {
+            return 'NO REGISTRADA: este cliente está "por aprobar"; el negocio aún no lo aprueba, así que todavía no puede agendar. Dile con calidez que en cuanto lo aprueben podrá agendar por aquí.';
         }
         $zdias   = dias_de_zona($idNegocio, (string)($cli['zona'] ?? ''));
         $diaCita = nombre_dia($fecha);
@@ -495,7 +512,10 @@ function consultar_disponibilidad(array $datos, ?string $contacto, int $idNegoci
     if (!empty($c['a_domicilio'])) {
         $cli = buscar_cliente_por_numero($idNegocio, (string)($contacto ?? ''));
         if (!$cli) {
-            return 'Este cliente NO está registrado para servicio a domicilio. NO le ofrezcas agenda: pídele nombre, WhatsApp, colonia y dirección, y usa escalar_a_humano para que el negocio lo registre.';
+            return 'Este cliente NO está registrado para servicio a domicilio. NO le ofrezcas agenda: pídele nombre completo, colonia y dirección, y usa registrar_cliente_domicilio para dejarlo "por aprobar".';
+        }
+        if ((int)($cli['aprobado'] ?? 1) !== 1) {
+            return 'Este cliente está "por aprobar"; aún no puede agendar. Dile que en cuanto el negocio lo apruebe podrá agendar por aquí.';
         }
         $zdias = dias_de_zona($idNegocio, (string)($cli['zona'] ?? ''));
         if ($zdias && !in_array($dia, $zdias, true)) {
@@ -547,6 +567,48 @@ function consultar_disponibilidad(array $datos, ?string $contacto, int $idNegoci
         return 'El ' . $dia . ' ' . $fecha . ' no hay horarios libres' . $etqProf . ($servicio !== '' ? ' para ' . $servicio : '') . '. Ofrece al cliente otro dia' . ($etqProf !== '' ? ' u otra persona del personal' : '') . '.';
     }
     return 'Horarios LIBRES el ' . $dia . ' ' . $fecha . $etqProf . ($servicio !== '' ? ' para ' . $servicio . ' (' . $dur . ' min)' : '') . ': ' . implode(', ', $libres) . '. Ofrece estos horarios al cliente.';
+}
+
+// Registra a un cliente desconocido como "por aprobar" (negocios a domicilio).
+// No agenda: deja el registro pendiente y avisa al dueño para que lo apruebe.
+function registrar_cliente_domicilio(array $datos, ?string $contacto, int $idNegocio): string {
+    $c = cargar_conocimiento($idNegocio);
+    if (empty($c['a_domicilio'])) {
+        return 'Este negocio no es a domicilio; no uses esta herramienta.';
+    }
+    $contacto = (string)($contacto ?? '');
+    if ($contacto === '' || stripos($contacto, 'web:') === 0) {
+        return 'NO REGISTRADO: es el chat web (anonimo), no hay numero de WhatsApp para registrar. Pidele que te escriba por WhatsApp, o usa escalar_a_humano.';
+    }
+    $nombre    = trim((string)($datos['nombre'] ?? ''));
+    $colonia   = trim((string)($datos['colonia'] ?? ''));
+    $direccion = trim((string)($datos['direccion'] ?? ''));
+    if ($nombre === '' || $colonia === '' || $direccion === '') {
+        return 'Faltan datos: pide nombre completo, colonia y direccion antes de registrar.';
+    }
+
+    $ya = buscar_cliente_por_numero($idNegocio, $contacto);
+    if ($ya) {
+        if ((int)($ya['aprobado'] ?? 1) === 1) {
+            return 'Este cliente YA esta registrado y aprobado; puede agendar. Usa registrar_cita.';
+        }
+        return 'Este cliente ya esta registrado y en espera de aprobacion. Dile que en cuanto el negocio lo apruebe podra agendar.';
+    }
+
+    // Autoasignar zona/cp si la colonia coincide con alguna zona del negocio.
+    $zc   = zona_de_colonia($idNegocio, $colonia);
+    $zona = $zc['zona'] ?? '';
+    $cp   = $zc['cp'] ?? '';
+
+    $r = crear_cliente($idNegocio, $nombre, $contacto, $zona, $colonia, $cp, $direccion, '', 0); // aprobado=0
+    if (empty($r['exito'])) {
+        return 'No se pudo registrar: ' . ($r['mensaje'] ?? 'error');
+    }
+    avisar_cliente_por_aprobar($c, $nombre, normalizar_para_wa($contacto), $zona, $colonia, $direccion);
+
+    $zonaTxt = $zona !== '' ? (' Quedo en la zona "' . $zona . '".') : ' (sin zona; el negocio se la asignara al aprobar).';
+    return 'REGISTRADO como "por aprobar": ' . $nombre . '.' . $zonaTxt
+         . ' Avisa al cliente con calidez que su registro quedo en revision y que en cuanto el negocio lo apruebe podra agendar por aqui. NO agendes todavia.';
 }
 
 function escalar_a_humano(array $datos, ?string $contacto, int $idNegocio): string {

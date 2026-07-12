@@ -115,7 +115,9 @@ function buscar_cliente_por_numero(int $idNegocio, string $numero): ?array {
     return null;
 }
 
-function crear_cliente(int $idNegocio, string $nombre, string $numero, string $zona, string $colonia, string $cp, string $direccion, string $notas = ''): array {
+// $aprobado: 1 = puede agendar (alta por el dueño); 0 = "por aprobar" (autoalta desde
+// WhatsApp; el dueño debe aprobarlo en el panel antes de que pueda agendar).
+function crear_cliente(int $idNegocio, string $nombre, string $numero, string $zona, string $colonia, string $cp, string $direccion, string $notas = '', int $aprobado = 1): array {
     $nombre = trim($nombre);
     $numero = normalizar_numero($numero);
     if ($nombre === '' || $numero === '') return ['exito' => false, 'mensaje' => 'Nombre y WhatsApp son obligatorios.'];
@@ -124,16 +126,39 @@ function crear_cliente(int $idNegocio, string $nombre, string $numero, string $z
         return ['exito' => false, 'mensaje' => 'Ya existe un cliente con ese número.'];
     }
     $st = conexion()->prepare(
-        "INSERT INTO clientes (id_negocio, nombre, numero, zona, colonia, cp, direccion, notas) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO clientes (id_negocio, nombre, numero, zona, colonia, cp, direccion, notas, aprobado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
     $st->execute([
         $idNegocio, $nombre, $numero, trim($zona) ?: null,
         trim($colonia) ?: null, trim($cp) ?: null, trim($direccion) ?: null, trim($notas) ?: null,
+        $aprobado ? 1 : 0,
     ]);
     $id = (int)conexion()->lastInsertId();
     // Ligar las citas que este número ya tenía (agendadas antes de darlo de alta).
     vincular_citas_cliente($id, $idNegocio, $numero);
     return ['exito' => true, 'id' => $id];
+}
+
+// Aprueba a un cliente que estaba "por aprobar" (lo hace el dueño desde el panel).
+function aprobar_cliente(int $idCliente, int $idNegocio): void {
+    conexion()->prepare("UPDATE clientes SET aprobado = 1 WHERE id = ? AND id_negocio = ?")
+              ->execute([$idCliente, $idNegocio]);
+}
+
+// Dada una colonia (por su nombre), busca en las zonas del negocio a cuál pertenece.
+// Devuelve ['zona','cp'] si la encuentra, o null. Sirve para autoasignar zona al
+// registrar un cliente nuevo desde el agente.
+function zona_de_colonia(int $idNegocio, string $colonia): ?array {
+    $b = mb_strtolower(trim($colonia), 'UTF-8');
+    if ($b === '') return null;
+    foreach (listar_zonas($idNegocio) as $z) {
+        foreach ($z['colonias'] as $col) {
+            if (mb_strtolower((string)($col['colonia'] ?? ''), 'UTF-8') === $b) {
+                return ['zona' => $z['nombre'], 'cp' => (string)($col['cp'] ?? '')];
+            }
+        }
+    }
+    return null;
 }
 
 // Un cliente por su id (re-verificando negocio). null si no existe o no es del negocio.
@@ -238,9 +263,10 @@ function bloque_contexto_domicilio(int $idNegocio, array $c, string $contacto): 
     $t = "\n=== MODO A DOMICILIO ACTIVO ===\n"
        . "Este negocio va a la CASA del cliente. Eso CAMBIA tu forma de atender: lo PRIMERO es la identidad de quien escribe, ANTES de hablar de agendar. Este protocolo tiene prioridad sobre las reglas generales de agendado.\n";
 
-    if ($cli) {
+    if ($cli && (int)($cli['aprobado'] ?? 1) === 1) {
+        // Cliente registrado Y aprobado: puede agendar.
         $zona = trim((string)($cli['zona'] ?? ''));
-        $t   .= 'CLIENTE IDENTIFICADO: quien te escribe YA está registrado y se llama ' . $cli['nombre'] . '. Salúdalo por su nombre.';
+        $t   .= 'CLIENTE IDENTIFICADO: quien te escribe YA está registrado y aprobado, se llama ' . $cli['nombre'] . '. Salúdalo por su nombre.';
         if ($zona !== '') {
             $dias = dias_de_zona($idNegocio, $zona);
             $lbls = $dias ? implode(', ', array_map(fn($d) => ucfirst($d), $dias)) : '(sin días configurados)';
@@ -254,14 +280,20 @@ function bloque_contexto_domicilio(int $idNegocio, array $c, string $contacto): 
             $t .= ' Su dirección ya está registrada: NO se la vuelvas a pedir.';
         }
         $t .= "\n";
+    } elseif ($cli) {
+        // Registrado pero POR APROBAR: aún no puede agendar.
+        $t .= 'CLIENTE POR APROBAR: ' . $cli['nombre'] . ' ya está registrado pero el negocio TODAVÍA no lo aprueba, así que aún NO puede agendar. '
+            . 'Salúdalo por su nombre, dile con calidez que su registro está en revisión y que en cuanto el negocio lo apruebe podrá agendar por aquí. '
+            . "Puedes responder dudas generales, pero NO uses registrar_cita.\n";
     } else {
+        // Desconocido: recabar datos y REGISTRARLO como "por aprobar" con la herramienta.
         $t .= 'CLIENTE NO IDENTIFICADO: quien te escribe NO está en el directorio'
-            . ($esWeb ? ' (es el chat web, anónimo: no se puede identificar por número).' : ' (su número no está registrado).')
-            . " Por SEGURIDAD no puedes agendarle una visita a domicilio ni prometerle una cita.\n"
-            . "IMPORTANTE - NO lo lleves por el flujo normal de agendar: NO le pidas servicio, día y hora como si fueras a registrar la cita (eso enreda la conversación y terminas pidiéndole todo de nuevo). En su lugar, sigue estos pasos:\n"
+            . ($esWeb ? ' (es el chat web, anónimo: no se puede identificar por número, así que NO puedes registrarlo; si quiere agendar, pídele que te escriba por WhatsApp o usa escalar_a_humano).' : ' (su número no está registrado).')
+            . " Por SEGURIDAD no puedes agendarle una visita a domicilio todavía.\n"
+            . "IMPORTANTE - NO lo lleves por el flujo normal de agendar (NO le pidas servicio/día/hora como si fueras a registrar la cita). En su lugar:\n"
             . "1) Puedes responder dudas generales (servicios, precios, en qué zonas y qué días atiende el negocio).\n"
-            . "2) En cuanto quiera agendar, dile con calidez que para atenderlo a domicilio el negocio necesita registrarlo primero, y pídele EN UN SOLO MENSAJE: nombre completo, colonia y dirección (su WhatsApp ya lo tienes).\n"
-            . "3) Cuando te dé esos datos, usa escalar_a_humano poniendo en el motivo su nombre, colonia, dirección y qué servicio/día le interesa. Dile que una persona del negocio lo contactará para confirmar. NUNCA uses registrar_cita con un cliente no identificado.\n";
+            . "2) En cuanto quiera agendar, dile con calidez que para atenderlo a domicilio necesitas registrarlo primero, y pídele EN UN SOLO MENSAJE: nombre completo, colonia y dirección (su WhatsApp ya lo tienes).\n"
+            . "3) Cuando te dé esos datos, usa la herramienta registrar_cliente_domicilio. Eso lo deja registrado como 'por aprobar' y avisa al negocio. Dile que en cuanto el negocio lo apruebe podrá agendar por aquí. NUNCA uses registrar_cita con un cliente no identificado.\n";
     }
     $t .= "En todo momento: NUNCA reveles el nombre, la dirección ni datos de ningún otro cliente.\n";
     return $t;

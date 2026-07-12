@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS clientes (
   cp VARCHAR(5) NULL,
   direccion VARCHAR(255) NULL,
   notas VARCHAR(255) NULL,
+  aprobado TINYINT(1) NOT NULL DEFAULT 1,
   creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   KEY idx_negocio_numero (id_negocio, numero),
   FOREIGN KEY (id_negocio) REFERENCES negocios(id) ON DELETE CASCADE

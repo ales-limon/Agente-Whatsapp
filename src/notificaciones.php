@@ -119,6 +119,29 @@ function avisar_escalacion(array $c, string $contacto, string $motivo = ''): voi
     }
 }
 
+// Avisa al dueño que un cliente NUEVO se registró desde WhatsApp y está "por aprobar"
+// (negocios a domicilio). Mensaje libre: llega si la ventana de 24h está abierta; de
+// cualquier forma el cliente queda visible en el panel (Clientes) con etiqueta Por aprobar.
+function avisar_cliente_por_aprobar(array $c, string $nombre, string $numero, string $zona, string $colonia, string $direccion): void {
+    cargar_entorno();
+    $para  = trim((string)($c['numero_avisos'] ?? ''));
+    $desde = trim((string)($c['numero_whatsapp'] ?? ''));
+    if ($para === '' || $desde === '') return;
+
+    $mensaje = "Nuevo cliente POR APROBAR en {$c['negocio']}:\n"
+             . "Nombre: {$nombre}\n"
+             . "WhatsApp: {$numero}\n"
+             . ($zona !== '' ? "Zona: {$zona}\n" : "Zona: (sin asignar)\n")
+             . "Colonia: {$colonia}\n"
+             . "Direccion: {$direccion}\n"
+             . "Apruebalo en el panel (seccion Clientes) para que pueda agendar a domicilio.";
+    try {
+        enviar_whatsapp($para, $mensaje, $desde);
+    } catch (Throwable $e) {
+        error_log('avisar_cliente_por_aprobar: ' . $e->getMessage());
+    }
+}
+
 // Avisa al dueño que se agendó una cita. $c es el conocimiento del negocio.
 function avisar_cita_agendada(array $c, array $cita): void {
     cargar_entorno();

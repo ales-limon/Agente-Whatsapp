@@ -84,6 +84,12 @@ if (!$colExiste('clientes', 'cp')) {
     $pdo->exec("ALTER TABLE clientes ADD COLUMN cp VARCHAR(5) NULL AFTER colonia");
     echo "Columna clientes.cp agregada.\n";
 }
+if (!$colExiste('clientes', 'aprobado')) {
+    // Los clientes existentes (dados de alta por el dueño) quedan aprobados (default 1).
+    // Los que el agente registra solo desde WhatsApp entran como 0 (por aprobar).
+    $pdo->exec("ALTER TABLE clientes ADD COLUMN aprobado TINYINT(1) NOT NULL DEFAULT 1 AFTER notas");
+    echo "Columna clientes.aprobado agregada.\n";
+}
 
 // Cargar el catálogo SEPOMEX (Zona Metropolitana de Guadalajara) la primera vez.
 if ((int)$pdo->query("SELECT COUNT(*) FROM colonias")->fetchColumn() === 0) {

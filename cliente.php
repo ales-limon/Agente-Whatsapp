@@ -43,6 +43,10 @@ if ($cliente && $_SERVER['REQUEST_METHOD'] === 'POST') {
         borrar_cliente($idCliente, $idNegocio);
         header('Location: clientes.php?t=' . urlencode($negocio['slug']));
         exit;
+    } elseif ($accion === 'aprobar') {
+        aprobar_cliente($idCliente, $idNegocio);
+        $mensaje = 'Cliente aprobado. Ya puede agendar a domicilio.';
+        $cliente = obtener_cliente($idCliente, $idNegocio);
     }
 }
 
@@ -78,6 +82,8 @@ $css = '
   .col-op:hover { background: var(--badge-bg); }
   .col-op small { color: var(--texto-2); }
   .col-vacio { padding: 9px 11px; font-size: 12px; color: var(--texto-2); }
+  .aviso-aprobar { display: flex; align-items: center; gap: 16px; justify-content: space-between; flex-wrap: wrap; background: #FDF3D6; border: 1px solid #EAD79B; color: #6E560F; border-radius: var(--radio); padding: 12px 16px; margin: 4px 0 16px; font-size: 13.5px; }
+  .aviso-aprobar .btn { white-space: nowrap; }
 ';
 
 layout_inicio('Cliente', 'negocio', 'clientes', ['negocio' => $negocio, 'css' => $css]);
@@ -106,6 +112,17 @@ $colTexto = trim((string)$cliente['colonia']) !== ''
 ?>
   <a class="ficha-vol" href="clientes.php?t=<?= h($negocio['slug']) ?>"><i class="fas fa-arrow-left"></i> Volver al directorio</a>
   <h1 class="contenido__h1"><?= h($cliente['nombre']) ?></h1>
+
+  <?php if ((int)($cliente['aprobado'] ?? 1) !== 1): ?>
+    <div class="aviso-aprobar">
+      <div><i class="fas fa-clock"></i> Este cliente se registró desde WhatsApp y está <strong>por aprobar</strong>. No podrá agendar hasta que lo apruebes. Revisa sus datos (zona, colonia, dirección) y aprueba.</div>
+      <form method="post" style="margin:0;">
+        <?= campo_csrf() ?>
+        <input type="hidden" name="accion" value="aprobar">
+        <button class="btn btn--primario" type="submit"><i class="fas fa-check"></i> Aprobar cliente</button>
+      </form>
+    </div>
+  <?php endif; ?>
 
   <?php if ($mensaje): ?><div class="alerta alerta--ok"><i class="fas fa-check-circle"></i><span><?= h($mensaje) ?></span></div><?php endif; ?>
   <?php if ($error): ?><div class="alerta alerta--error"><i class="fas fa-exclamation-triangle"></i><span><?= h($error) ?></span></div><?php endif; ?>
