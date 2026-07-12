@@ -129,7 +129,7 @@ layout_inicio('Clientes', 'negocio', 'clientes', ['negocio' => $negocio, 'css' =
 
   <?php if ($clientes): ?>
     <div class="barra-buscar"><i class="fas fa-search"></i><input type="text" id="buscar" placeholder="Buscar cliente..." autocomplete="off"></div>
-    <table class="tabla-cli" id="tabla-cli">
+    <div class="tabla-scroll"><table class="tabla-cli" id="tabla-cli">
       <thead>
         <tr><th>Nombre</th><th>WhatsApp</th><th>Zona</th><th>Dirección</th><th>Notas</th><th></th></tr>
       </thead>
@@ -163,7 +163,7 @@ layout_inicio('Clientes', 'negocio', 'clientes', ['negocio' => $negocio, 'css' =
         </tr>
       <?php endforeach; ?>
       </tbody>
-    </table>
+    </table></div>
     <div id="sin-res" style="display:none; color:var(--texto-2); padding:12px 0;">No hay clientes que coincidan.</div>
   <?php else: ?>
     <div class="vacio">Aún no tienes clientes en el directorio.</div>

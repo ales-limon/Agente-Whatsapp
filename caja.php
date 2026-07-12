@@ -106,7 +106,7 @@ layout_inicio('Caja', 'negocio', 'caja', ['negocio' => $negocio, 'css' => $css])
   <?php if (!$citas): ?>
     <div class="vacio">Aún no hay citas para cobrar.</div>
   <?php else: ?>
-    <table class="tabla-caja">
+    <div class="tabla-scroll"><table class="tabla-caja">
       <thead>
         <tr><th>Día</th><th>Cliente</th><th>Servicio</th><th>Precio</th><th>Cobro</th></tr>
       </thead>
@@ -145,7 +145,7 @@ layout_inicio('Caja', 'negocio', 'caja', ['negocio' => $negocio, 'css' => $css])
         </tr>
       <?php endforeach; ?>
       </tbody>
-    </table>
+    </table></div>
   <?php endif; ?>
 <?php
 layout_fin();

@@ -76,7 +76,7 @@ layout_inicio('Negocios', 'superadmin', 'negocios', ['css' => $css]);
       <i class="fas fa-search"></i>
       <input id="buscar" class="campo" type="search" placeholder="Buscar negocio por nombre o slug...">
     </div>
-    <table class="tabla" id="tabla-negocios">
+    <div class="tabla-scroll"><table class="tabla" id="tabla-negocios">
       <thead>
         <tr><th>Negocio</th><th>Uso del mes</th><th>Número y límite</th><th></th></tr>
       </thead>
@@ -117,7 +117,7 @@ layout_inicio('Negocios', 'superadmin', 'negocios', ['css' => $css]);
         </tr>
       <?php endforeach; ?>
       </tbody>
-    </table>
+    </table></div>
     <div class="sin-resultados" id="sin-resultados">No hay negocios que coincidan con la búsqueda.</div>
   <?php endif; ?>
 

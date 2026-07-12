@@ -179,7 +179,7 @@ $colTexto = trim((string)$cliente['colonia']) !== ''
       <?php if (!$pagos['citas']): ?>
         <div class="vacio" style="font-size:13px;">Este cliente aún no tiene citas registradas.</div>
       <?php else: ?>
-        <table class="tabla-pagos">
+        <div class="tabla-scroll"><table class="tabla-pagos">
           <thead><tr><th>Día</th><th>Servicio</th><th>Estado / cobro</th></tr></thead>
           <tbody>
           <?php foreach ($pagos['citas'] as $c): ?>
@@ -198,7 +198,7 @@ $colTexto = trim((string)$cliente['colonia']) !== ''
             </tr>
           <?php endforeach; ?>
           </tbody>
-        </table>
+        </table></div>
         <p style="font-size:12px; color:var(--texto-2); margin:12px 0 0;">Los cobros se registran en <a href="caja.php?t=<?= h($negocio['slug']) ?>">Caja</a>.</p>
       <?php endif; ?>
     </div>

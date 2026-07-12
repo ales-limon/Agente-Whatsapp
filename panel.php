@@ -177,7 +177,7 @@ layout_inicio('Citas', 'negocio', 'citas', ['negocio' => $negocio, 'css' => $css
     <?php if (!$citas): ?>
       <div class="vacio">Aun no hay citas. Cuando el asistente agende una, aparecera aqui.</div>
     <?php else: ?>
-      <table class="tabla">
+      <div class="tabla-scroll"><table class="tabla">
         <thead>
           <tr><th>Folio</th><th>Cliente</th><th>Servicio</th><th>Atiende</th><?php if (!empty($negocio['a_domicilio'])): ?><th>Dirección</th><?php endif; ?><th>Día</th><th>Hora</th><th>Contacto</th><th>Estado</th><th></th></tr>
         </thead>
@@ -206,7 +206,7 @@ layout_inicio('Citas', 'negocio', 'citas', ['negocio' => $negocio, 'css' => $css
           </tr>
         <?php endforeach; ?>
         </tbody>
-      </table>
+      </table></div>
     <?php endif; ?>
   </div>
 

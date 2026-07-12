@@ -65,7 +65,7 @@ layout_inicio('Usuarios', 'superadmin', 'usuarios', ['css' => $css]);
     <i class="fas fa-search"></i>
     <input id="buscar" class="campo" type="search" placeholder="Buscar por correo, nombre o negocio...">
   </div>
-  <table class="tabla" id="tabla-usuarios">
+  <div class="tabla-scroll"><table class="tabla" id="tabla-usuarios">
     <thead><tr><th>Correo</th><th>Nombre</th><th>Rol</th><th>Negocio</th></tr></thead>
     <tbody>
     <?php foreach ($usuarios as $u): ?>
@@ -77,7 +77,7 @@ layout_inicio('Usuarios', 'superadmin', 'usuarios', ['css' => $css]);
       </tr>
     <?php endforeach; ?>
     </tbody>
-  </table>
+  </table></div>
   <div class="sin-resultados" id="sin-resultados">No hay usuarios que coincidan con la búsqueda.</div>
 
   <script>

@@ -212,10 +212,14 @@ body.app { display: flex; min-height: 100vh; }
   .campo-fila { grid-template-columns: 1fr !important; }
   .ficha-grid { grid-template-columns: 1fr !important; }
 
-  /* Tablas anchas: scroll horizontal propio en vez de desbordar la página */
-  .tabla, .tabla-cli, .tabla-pagos {
-    display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap;
-  }
+  /* Tablas anchas: se envuelven en .tabla-scroll (ver abajo). Aquí evitamos que
+     el texto se parta en muchas líneas dentro del scroll. */
+  .tabla-scroll > table { white-space: nowrap; }
+  /* Otros elementos con ancho fijo que podrían desbordar en el teléfono */
+  .conv .prev { max-width: 100% !important; }
+
+  /* Guard: la página NUNCA debe deslizarse de lado (las tablas scrollean solas) */
+  .contenido { overflow-x: hidden; }
 
   /* Espaciado y títulos más compactos */
   .contenido { padding: 16px 13px; }
@@ -246,6 +250,9 @@ h2.seccion-t { font-family: var(--fuente-titulo); font-size: 17px; font-weight: 
 .input-mini { padding: 7px 10px; border: 1.5px solid var(--borde); border-radius: var(--radio-sm); font-size: 13px; font-family: var(--fuente-cuerpo); color: var(--tinta); background: var(--superficie); }
 .btn-mini { padding: 7px 12px; border: 1.5px solid var(--borde); background: var(--superficie); color: var(--tinta); border-radius: var(--radio-sm); font-size: 13px; cursor: pointer; }
 .btn-mini:hover { background: #F4F8F9; }
+/* Envoltorio para tablas: en pantallas angostas la tabla scrollea de lado dentro
+   de este contenedor en vez de romper la página. Inocuo en escritorio. */
+.tabla-scroll { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .tabla { width: 100%; border-collapse: collapse; background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); overflow: hidden; }
 .tabla th, .tabla td { text-align: left; padding: 11px 14px; font-size: 13px; border-bottom: 1px solid var(--borde); }
 .tabla th { background: #F4F8F9; color: var(--texto-2); font-weight: 600; font-size: 12px; }

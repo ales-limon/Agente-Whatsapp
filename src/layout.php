@@ -48,7 +48,7 @@ function layout_inicio(string $titulo, string $contexto, string $activo, array $
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= $esc($titulo) ?> — Agente de WhatsApp</title>
-<link rel="stylesheet" href="assets/identidad.css">
+<link rel="stylesheet" href="assets/identidad.css?v=<?= @filemtime(__DIR__ . '/../assets/identidad.css') ?: '1' ?>">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <?php if ($css !== ''): ?><style><?= $css ?></style><?php endif; ?>
 </head>
