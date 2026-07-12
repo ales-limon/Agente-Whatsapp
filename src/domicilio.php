@@ -235,29 +235,34 @@ function bloque_contexto_domicilio(int $idNegocio, array $c, string $contacto): 
     $esWeb = stripos($contacto, 'web:') === 0;
     $cli   = $esWeb ? null : buscar_cliente_por_numero($idNegocio, $contacto);
 
-    $t = "\nATENCIÓN A DOMICILIO: este negocio va a la casa del cliente.\n";
+    $t = "\n=== MODO A DOMICILIO ACTIVO ===\n"
+       . "Este negocio va a la CASA del cliente. Eso CAMBIA tu forma de atender: lo PRIMERO es la identidad de quien escribe, ANTES de hablar de agendar. Este protocolo tiene prioridad sobre las reglas generales de agendado.\n";
 
     if ($cli) {
         $zona = trim((string)($cli['zona'] ?? ''));
-        $t   .= 'El cliente que te escribe está REGISTRADO: ' . $cli['nombre'] . '.';
+        $t   .= 'CLIENTE IDENTIFICADO: quien te escribe YA está registrado y se llama ' . $cli['nombre'] . '. Salúdalo por su nombre.';
         if ($zona !== '') {
             $dias = dias_de_zona($idNegocio, $zona);
             $lbls = $dias ? implode(', ', array_map(fn($d) => ucfirst($d), $dias)) : '(sin días configurados)';
-            $t   .= ' Zona "' . $zona . '", que se atiende: ' . $lbls . '.';
-            $t   .= ' Si pregunta "cuándo vienes por mi zona", dile esos días y ofrécele la próxima fecha. Al agendar, ofrece SOLO esos días.';
+            $t   .= ' Su zona es "' . $zona . '" y esa zona SOLO se atiende: ' . $lbls . '.'
+                 .  ' Desde el inicio, si quiere agendar (o pregunta "cuándo vienes por mi zona"), recuérdale que en su zona atiendes esos días y ofrécele ÚNICAMENTE esos días.'
+                 .  ' Pregúntale qué servicio quiere y a qué hora, y cuando elija un día válido usa registrar_cita normalmente.';
         } else {
-            $t .= ' (sin zona asignada; ofrece según el horario normal).';
+            $t .= ' No tiene zona asignada; agéndale según el horario normal con registrar_cita.';
         }
         if (trim((string)($cli['direccion'] ?? '')) !== '') {
-            $t .= ' Su dirección ya está registrada, NO se la vuelvas a pedir.';
+            $t .= ' Su dirección ya está registrada: NO se la vuelvas a pedir.';
         }
         $t .= "\n";
     } else {
-        $t .= 'Quien te escribe NO está registrado como cliente' . ($esWeb ? ' (además es el chat web, anónimo)' : '') . '. '
-            . 'NO agendes una visita a domicilio a alguien desconocido (es por SEGURIDAD). Puedes responder dudas generales '
-            . '(servicios, precios, zonas, horarios). Si quiere agendar, pídele nombre, WhatsApp, colonia y dirección, y usa '
-            . "escalar_a_humano para que el negocio lo registre y apruebe.\n";
+        $t .= 'CLIENTE NO IDENTIFICADO: quien te escribe NO está en el directorio'
+            . ($esWeb ? ' (es el chat web, anónimo: no se puede identificar por número).' : ' (su número no está registrado).')
+            . " Por SEGURIDAD no puedes agendarle una visita a domicilio ni prometerle una cita.\n"
+            . "IMPORTANTE - NO lo lleves por el flujo normal de agendar: NO le pidas servicio, día y hora como si fueras a registrar la cita (eso enreda la conversación y terminas pidiéndole todo de nuevo). En su lugar, sigue estos pasos:\n"
+            . "1) Puedes responder dudas generales (servicios, precios, en qué zonas y qué días atiende el negocio).\n"
+            . "2) En cuanto quiera agendar, dile con calidez que para atenderlo a domicilio el negocio necesita registrarlo primero, y pídele EN UN SOLO MENSAJE: nombre completo, colonia y dirección (su WhatsApp ya lo tienes).\n"
+            . "3) Cuando te dé esos datos, usa escalar_a_humano poniendo en el motivo su nombre, colonia, dirección y qué servicio/día le interesa. Dile que una persona del negocio lo contactará para confirmar. NUNCA uses registrar_cita con un cliente no identificado.\n";
     }
-    $t .= "NUNCA reveles la dirección, el nombre ni datos de ningún otro cliente.\n";
+    $t .= "En todo momento: NUNCA reveles el nombre, la dirección ni datos de ningún otro cliente.\n";
     return $t;
 }
