@@ -83,13 +83,34 @@ function enviar_whatsapp_plantilla(string $para, string $desde, string $contentS
 
 // Avisa al dueño que un cliente pidió atención humana (escalación). $c = conocimiento.
 function avisar_escalacion(array $c, string $contacto, string $motivo = ''): void {
+    cargar_entorno();
     $para  = trim((string)($c['numero_avisos'] ?? ''));
     $desde = trim((string)($c['numero_whatsapp'] ?? ''));
     if ($para === '' || $desde === '') return;
 
+    $motivoTxt   = $motivo !== '' ? $motivo : 'Quiere agendar o necesita atencion';
+    $contactoTxt = normalizar_para_wa($contacto); // numero limpio, sin el prefijo whatsapp:
+
+    // Plantilla aprobada: llega aunque el dueño no haya escrito en las ultimas 24h.
+    // Este aviso es critico (alguien desconocido pide atencion/visita), por eso va por plantilla.
+    $contentSid = trim((string) env('TWILIO_PLANTILLA_ESCALACION', ''));
+    if ($contentSid !== '') {
+        try {
+            $r = enviar_whatsapp_plantilla($para, $desde, $contentSid, [
+                '1' => (string)($c['negocio'] ?? ''),
+                '2' => $contactoTxt,
+                '3' => $motivoTxt,
+            ]);
+            if (!empty($r['exito'])) return;
+        } catch (Throwable $e) {
+            error_log('avisar_escalacion (plantilla): ' . $e->getMessage());
+        }
+    }
+
+    // Sin plantilla (o si falló): mensaje libre. Solo entrega dentro de la ventana de 24h.
     $mensaje = "Atencion requerida en {$c['negocio']}:\n"
-             . "El cliente {$contacto} necesita hablar con una persona"
-             . ($motivo !== '' ? ".\nMotivo: {$motivo}" : '.') . "\n"
+             . "El cliente {$contactoTxt} necesita hablar con una persona.\n"
+             . "Motivo: {$motivoTxt}\n"
              . "El asistente quedo en pausa para ese chat hasta que lo reactives en el panel (seccion Citas).";
     try {
         enviar_whatsapp($para, $mensaje, $desde);
