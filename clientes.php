@@ -73,6 +73,10 @@ $css = '
   .tabla-cli td { padding: 10px 12px; border-bottom: 1px solid var(--borde); font-size: 14px; vertical-align: middle; }
   .tabla-cli tr:last-child td { border-bottom: 0; }
   .pill-zona { background: var(--badge-bg); color: var(--marca); font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; }
+  .cli-nombre { color: var(--tinta); font-weight: 600; text-decoration: none; }
+  .cli-nombre:hover { color: var(--marca); text-decoration: underline; }
+  .cli-editar { color: var(--texto-2); font-size: 13px; margin-right: 12px; text-decoration: none; }
+  .cli-editar:hover { color: var(--marca); }
   .cli-info { font-size: 13px; color: var(--texto-2); margin: 0 0 14px; }
   .col-sug { position: absolute; top: 100%; left: 0; right: 0; z-index: 20; background: var(--superficie); border: 1px solid var(--borde); border-top: 0; border-radius: 0 0 var(--radio) var(--radio); max-height: 240px; overflow-y: auto; box-shadow: 0 8px 24px rgba(10,27,34,.14); }
   .col-sug:empty { display: none; }
@@ -125,13 +129,15 @@ layout_inicio('Clientes', 'negocio', 'clientes', ['negocio' => $negocio, 'css' =
       </thead>
       <tbody>
       <?php foreach ($clientes as $cl): ?>
+        <?php $urlFicha = 'cliente.php?id=' . (int)$cl['id'] . '&t=' . urlencode($negocio['slug']); ?>
         <tr data-buscar="<?= h(mb_strtolower($cl['nombre'] . ' ' . $cl['numero'] . ' ' . ($cl['zona'] ?? '') . ' ' . ($cl['direccion'] ?? ''), 'UTF-8')) ?>">
-          <td><?= h($cl['nombre']) ?></td>
+          <td><a href="<?= h($urlFicha) ?>" class="cli-nombre"><?= h($cl['nombre']) ?></a></td>
           <td><?= h($cl['numero']) ?></td>
           <td><?= $cl['zona'] ? '<span class="pill-zona">' . h($cl['zona']) . '</span>' : '<span style="color:var(--texto-2)">—</span>' ?></td>
           <td><?= h($cl['direccion']) ?: '<span style="color:var(--texto-2)">—</span>' ?></td>
           <td><?= h($cl['notas']) ?: '<span style="color:var(--texto-2)">—</span>' ?></td>
-          <td style="text-align:right;">
+          <td style="text-align:right; white-space:nowrap;">
+            <a href="<?= h($urlFicha) ?>" class="cli-editar" title="Ver ficha y editar"><i class="fas fa-pen"></i></a>
             <form method="post" style="display:inline;" onsubmit="return confirm('¿Eliminar a este cliente?');">
               <?= campo_csrf() ?>
               <input type="hidden" name="accion" value="borrar_cliente">

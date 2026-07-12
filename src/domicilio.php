@@ -130,11 +130,98 @@ function crear_cliente(int $idNegocio, string $nombre, string $numero, string $z
         $idNegocio, $nombre, $numero, trim($zona) ?: null,
         trim($colonia) ?: null, trim($cp) ?: null, trim($direccion) ?: null, trim($notas) ?: null,
     ]);
-    return ['exito' => true, 'id' => (int)conexion()->lastInsertId()];
+    $id = (int)conexion()->lastInsertId();
+    // Ligar las citas que este número ya tenía (agendadas antes de darlo de alta).
+    vincular_citas_cliente($id, $idNegocio, $numero);
+    return ['exito' => true, 'id' => $id];
+}
+
+// Un cliente por su id (re-verificando negocio). null si no existe o no es del negocio.
+function obtener_cliente(int $idCliente, int $idNegocio): ?array {
+    $st = conexion()->prepare("SELECT * FROM clientes WHERE id = ? AND id_negocio = ?");
+    $st->execute([$idCliente, $idNegocio]);
+    return $st->fetch() ?: null;
+}
+
+function actualizar_cliente(int $idCliente, int $idNegocio, string $nombre, string $numero, string $zona, string $colonia, string $cp, string $direccion, string $notas = ''): array {
+    $actual = obtener_cliente($idCliente, $idNegocio);
+    if (!$actual) return ['exito' => false, 'mensaje' => 'Cliente no encontrado.'];
+
+    $nombre = trim($nombre);
+    $numero = normalizar_numero($numero);
+    if ($nombre === '' || $numero === '') return ['exito' => false, 'mensaje' => 'Nombre y WhatsApp son obligatorios.'];
+
+    // Si cambió el número, verificar que no choque con otro cliente.
+    if (!mismo_numero($numero, (string)$actual['numero'])) {
+        $otro = buscar_cliente_por_numero($idNegocio, $numero);
+        if ($otro && (int)$otro['id'] !== $idCliente) {
+            return ['exito' => false, 'mensaje' => 'Ya existe otro cliente con ese número.'];
+        }
+    }
+
+    $st = conexion()->prepare(
+        "UPDATE clientes SET nombre = ?, numero = ?, zona = ?, colonia = ?, cp = ?, direccion = ?, notas = ?
+         WHERE id = ? AND id_negocio = ?"
+    );
+    $st->execute([
+        $nombre, $numero, trim($zona) ?: null, trim($colonia) ?: null, trim($cp) ?: null,
+        trim($direccion) ?: null, trim($notas) ?: null, $idCliente, $idNegocio,
+    ]);
+
+    // Si cambió el número, re-ligar sus citas: soltar las viejas y enganchar las del nuevo.
+    if (!mismo_numero($numero, (string)$actual['numero'])) {
+        conexion()->prepare("UPDATE citas SET id_cliente = NULL WHERE id_cliente = ? AND id_negocio = ?")
+                   ->execute([$idCliente, $idNegocio]);
+        vincular_citas_cliente($idCliente, $idNegocio, $numero);
+    }
+    return ['exito' => true];
 }
 
 function borrar_cliente(int $idCliente, int $idNegocio): void {
     conexion()->prepare("DELETE FROM clientes WHERE id = ? AND id_negocio = ?")->execute([$idCliente, $idNegocio]);
+}
+
+// Engancha a este cliente las citas del negocio que aún no tienen dueño y cuyo número
+// coincide (últimos 10 dígitos). Devuelve cuántas ligó. Reusa mismo_numero para ser
+// robusto a los formatos +52 / +521 / whatsapp:.
+function vincular_citas_cliente(int $idCliente, int $idNegocio, string $numero): int {
+    $numero = trim($numero);
+    if ($idCliente <= 0 || $numero === '') return 0;
+    $pdo = conexion();
+    $st  = $pdo->prepare("SELECT id, contacto FROM citas WHERE id_negocio = ? AND id_cliente IS NULL");
+    $st->execute([$idNegocio]);
+    $ids = [];
+    foreach ($st as $row) {
+        if (mismo_numero($numero, (string)$row['contacto'])) $ids[] = (int)$row['id'];
+    }
+    if (!$ids) return 0;
+    $in = implode(',', array_fill(0, count($ids), '?'));
+    $pdo->prepare("UPDATE citas SET id_cliente = ? WHERE id_negocio = ? AND id IN ($in)")
+        ->execute(array_merge([$idCliente, $idNegocio], $ids));
+    return count($ids);
+}
+
+// Historial de citas de un cliente + resumen de lo cobrado. Devuelve:
+//   ['citas' => [...], 'total' => float, 'num_cobradas' => int, 'ultima' => 'Y-m-d H:i:s'|null]
+function pagos_de_cliente(int $idCliente, int $idNegocio): array {
+    $st = conexion()->prepare(
+        "SELECT id, servicio, profesional, fecha, dia_texto, hora, estado, pagado, metodo_pago, monto_cobrado, pagado_en
+         FROM citas
+         WHERE id_cliente = ? AND id_negocio = ?
+         ORDER BY (fecha IS NULL), fecha DESC, hora DESC, id DESC"
+    );
+    $st->execute([$idCliente, $idNegocio]);
+    $citas = $st->fetchAll();
+    $total = 0.0; $num = 0; $ultima = null;
+    foreach ($citas as $c) {
+        if ((int)$c['pagado'] === 1) {
+            $total += (float)$c['monto_cobrado'];
+            $num++;
+            $pe = (string)($c['pagado_en'] ?? '');
+            if ($pe !== '' && ($ultima === null || $pe > $ultima)) $ultima = $pe;
+        }
+    }
+    return ['citas' => $citas, 'total' => $total, 'num_cobradas' => $num, 'ultima' => $ultima];
 }
 
 // ---------- Contexto para el agente (modo a domicilio) ----------

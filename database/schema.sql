@@ -109,6 +109,7 @@ CREATE TABLE IF NOT EXISTS recursos (
 CREATE TABLE IF NOT EXISTS citas (
   id INT AUTO_INCREMENT PRIMARY KEY,
   id_negocio INT NOT NULL,
+  id_cliente INT NULL,
   nombre VARCHAR(160) NOT NULL,
   servicio VARCHAR(200) NULL,
   profesional VARCHAR(120) NULL,
@@ -126,7 +127,9 @@ CREATE TABLE IF NOT EXISTS citas (
   pagado_en DATETIME NULL,
   creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   KEY idx_negocio_fecha (id_negocio, fecha),
-  FOREIGN KEY (id_negocio) REFERENCES negocios(id) ON DELETE CASCADE
+  KEY idx_cliente (id_cliente),
+  FOREIGN KEY (id_negocio) REFERENCES negocios(id) ON DELETE CASCADE,
+  FOREIGN KEY (id_cliente) REFERENCES clientes(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS password_resets (

@@ -6,6 +6,7 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/conocimiento.php';
 require_once __DIR__ . '/notificaciones.php';
 require_once __DIR__ . '/escalacion.php';
+require_once __DIR__ . '/domicilio.php'; // buscar_cliente_por_numero (ligar cita -> cliente)
 
 function herramientas_disponibles(): array {
     return [
@@ -297,8 +298,13 @@ function registrar_cita(array $datos, ?string $contacto, int $idNegocio): string
     $dia = trim((string)($datos['dia'] ?? ''));
     if ($dia === '') $dia = $fecha;
 
-    $st = conexion()->prepare("INSERT INTO citas (id_negocio, nombre, servicio, profesional, direccion, fecha, dia_texto, hora, duracion, contacto, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente')");
-    $st->execute([$idNegocio, $nombre, $servicio, $profAsignado, $direccionCli, $fecha, $dia, $horaTxt, $dur, $contacto ?? 'desconocido']);
+    // Si el número que agenda ya es un cliente del directorio, dejamos la cita ligada
+    // a su ficha (para su historial de pagos). Si no, queda sin cliente (id_cliente NULL).
+    $cli       = $contacto ? buscar_cliente_por_numero($idNegocio, $contacto) : null;
+    $idCliente = $cli ? (int)$cli['id'] : null;
+
+    $st = conexion()->prepare("INSERT INTO citas (id_negocio, id_cliente, nombre, servicio, profesional, direccion, fecha, dia_texto, hora, duracion, contacto, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente')");
+    $st->execute([$idNegocio, $idCliente, $nombre, $servicio, $profAsignado, $direccionCli, $fecha, $dia, $horaTxt, $dur, $contacto ?? 'desconocido']);
     $folio = (int)conexion()->lastInsertId();
 
     // Avisar al dueño por WhatsApp (si tiene número de avisos configurado).

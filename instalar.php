@@ -112,6 +112,24 @@ foreach ([
     if (!$colExiste('citas', $col)) { $pdo->exec($sql); echo "Columna citas.$col agregada.\n"; }
 }
 
+// Vínculo formal cita -> cliente (además del match por número). Al agregarla por
+// primera vez, se ligan las citas históricas a su cliente por número de WhatsApp.
+if (!$colExiste('citas', 'id_cliente')) {
+    $pdo->exec("ALTER TABLE citas ADD COLUMN id_cliente INT NULL AFTER id_negocio");
+    try { $pdo->exec("ALTER TABLE citas ADD KEY idx_cliente (id_cliente)"); } catch (Throwable $e) {}
+    try {
+        $pdo->exec("ALTER TABLE citas ADD CONSTRAINT fk_citas_cliente FOREIGN KEY (id_cliente) REFERENCES clientes(id) ON DELETE SET NULL");
+    } catch (Throwable $e) { echo "Nota: no se pudo crear la FK citas.id_cliente (" . $e->getMessage() . "); la columna igual funciona.\n"; }
+    echo "Columna citas.id_cliente agregada.\n";
+
+    require_once __DIR__ . '/src/domicilio.php';
+    $ligadas = 0;
+    foreach ($pdo->query("SELECT id, id_negocio, numero FROM clientes")->fetchAll() as $cl) {
+        $ligadas += vincular_citas_cliente((int)$cl['id'], (int)$cl['id_negocio'], (string)$cl['numero']);
+    }
+    echo "Citas ligadas a clientes por número: $ligadas.\n";
+}
+
 // Backfill del enlace usuario-negocio desde la columna usuarios.id_negocio (idempotente).
 $pdo->exec("INSERT IGNORE INTO usuario_negocio (id_usuario, id_negocio)
             SELECT id, id_negocio FROM usuarios WHERE id_negocio IS NOT NULL");
