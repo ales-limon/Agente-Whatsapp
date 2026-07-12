@@ -6,10 +6,16 @@
 require_once __DIR__ . '/herramientas.php';
 
 function llamar_claude_raw(string $apiKey, string $modelo, string $systemPrompt, array $mensajes, array $tools): array {
+    // Prompt caching: marca el system prompt como cacheable (arrastra las herramientas
+    // que van antes en el prefijo). Reduce costo y latencia al reusar el prefijo estable
+    // entre turnos de una misma conversación. Reversible con CACHE_PROMPT=0 en .env.
+    $cachear = env('CACHE_PROMPT', '1') === '1';
     $payload = [
         'model'      => $modelo,
         'max_tokens' => 600,
-        'system'     => $systemPrompt,
+        'system'     => $cachear
+            ? [['type' => 'text', 'text' => $systemPrompt, 'cache_control' => ['type' => 'ephemeral']]]
+            : $systemPrompt,
         'messages'   => $mensajes,
     ];
     if ($tools) $payload['tools'] = $tools;
@@ -82,7 +88,11 @@ function responder_con_claude(string $systemPrompt, array $historial, string $me
 
         $data    = $r['data'];
         $u       = $data['usage'] ?? [];
-        $uso['entrada'] += (int)($u['input_tokens'] ?? 0);
+        // 'entrada' se guarda como tokens equivalentes en COSTO: los de caché escrito
+        // cuestan 1.25x y los leídos del caché 0.10x del precio de entrada normal.
+        $uso['entrada'] += (int)($u['input_tokens'] ?? 0)
+            + (int)round(((int)($u['cache_creation_input_tokens'] ?? 0)) * 1.25)
+            + (int)round(((int)($u['cache_read_input_tokens'] ?? 0)) * 0.10);
         $uso['salida']  += (int)($u['output_tokens'] ?? 0);
         $content = $data['content'] ?? [];
         $stop    = $data['stop_reason'] ?? '';
