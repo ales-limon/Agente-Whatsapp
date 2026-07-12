@@ -83,7 +83,11 @@ function formato_horario(array $c): string {
 function construir_system_prompt(array $c): string {
     $negocio     = $c['negocio']     ?? 'el negocio';
     $descripcion = $c['descripcion'] ?? '';
-    $ubicacion   = $c['ubicacion']   ?? 'No especificada';
+    // En negocios a domicilio la dirección NO es un punto de atención (van a casa del
+    // cliente); se marca como referencia interna para que el agente no la ofrezca.
+    $ubicacion   = !empty($c['a_domicilio'])
+        ? 'SERVICIO A DOMICILIO (van a la casa del cliente; NO hay local al que asista). Referencia interna del negocio: ' . ($c['ubicacion'] ?? 'no especificada') . ' — NO se la des al cliente como lugar de visita.'
+        : ($c['ubicacion'] ?? 'No especificada');
     $politicas   = $c['politicas']   ?? '';
     $extra       = trim((string)($c['instrucciones_extra'] ?? ''));
     $horario     = formato_horario($c);

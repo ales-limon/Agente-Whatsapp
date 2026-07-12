@@ -272,7 +272,9 @@ function bloque_contexto_domicilio(int $idNegocio, array $c, string $contacto): 
     $cli   = $esWeb ? null : buscar_cliente_por_numero($idNegocio, $contacto);
 
     $t = "\n=== MODO A DOMICILIO ACTIVO ===\n"
-       . "Este negocio va a la CASA del cliente. Eso CAMBIA tu forma de atender: lo PRIMERO es la identidad de quien escribe, ANTES de hablar de agendar. Este protocolo tiene prioridad sobre las reglas generales de agendado.\n";
+       . "Este negocio va a la CASA del cliente; NO tiene local al que el cliente asista. Eso CAMBIA tu forma de atender y tiene prioridad sobre las reglas generales.\n"
+       . "REGLA CLAVE: NUNCA le des al cliente una dirección del negocio como si tuviera que ir ahí, ni digas 'te atendemos en [dirección]' o 'estamos en [dirección]'. TÚ vas a su domicilio. Si pregunta dónde están, por la ubicación o cómo llegar, aclárale con calidez que el servicio es A DOMICILIO: van a su casa. Desde tu primer mensaje deja claro que es servicio a domicilio.\n"
+       . "Además, lo PRIMERO es identificar quién escribe antes de agendar.\n";
 
     if ($cli && (int)($cli['aprobado'] ?? 1) === 1) {
         // Cliente registrado Y aprobado: puede agendar.
