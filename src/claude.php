@@ -45,6 +45,14 @@ function responder_con_claude(string $systemPrompt, array $historial, string $me
         return 'En este momento no puedo atenderte automaticamente. Una persona del consultorio te respondera en breve.';
     }
     $modelo = env('CLAUDE_MODELO', 'claude-haiku-4-5-20251001');
+    // Los negocios A DOMICILIO usan un modelo más capaz (Sonnet): su flujo de
+    // identificación y registro exige seguir instrucciones con precisión y Haiku
+    // falla ahí (a veces no llama las herramientas). El resto sigue en Haiku barato.
+    require_once __DIR__ . '/conocimiento.php';
+    $cNeg = cargar_conocimiento($idNegocio);
+    if (!empty($cNeg['a_domicilio'])) {
+        $modelo = env('CLAUDE_MODELO_DOMICILIO', 'claude-sonnet-5');
+    }
 
     // Historial previo + mensaje actual, en el formato de la API
     $mensajes = [];
