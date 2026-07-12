@@ -293,19 +293,22 @@ function bloque_contexto_domicilio(int $idNegocio, array $c, string $contacto): 
         $t .= "\n";
     } elseif ($cli) {
         // Registrado pero POR APROBAR: aún no puede agendar.
-        $t .= 'CLIENTE POR APROBAR: ' . $cli['nombre'] . ' ya está registrado pero el negocio TODAVÍA no lo aprueba, así que aún NO puede agendar. '
-            . 'Salúdalo por su nombre, dile con calidez que su registro está en revisión y que en cuanto el negocio lo apruebe podrá agendar por aquí. '
-            . "Puedes responder dudas generales, pero NO uses registrar_cita.\n";
+        $t .= 'CLIENTE EN REVISIÓN: ' . $cli['nombre'] . ' ya se registró y su alta está PENDIENTE de que el negocio lo apruebe, así que todavía no puede agendar. '
+            . 'Salúdalo por su nombre con calidez. Si quiere una cita, dile con amabilidad que su registro está en revisión y que en cuanto lo aprueben podrá agendar por aquí; ofrécele avisarle o resolver otras dudas mientras tanto. '
+            . "NO le pidas de nuevo sus datos, NO lo vuelvas a registrar y NO uses registrar_cita.\n";
+    } elseif ($esWeb) {
+        // Chat web anónimo: no se puede identificar ni registrar por número.
+        $t .= "CLIENTE POR CHAT WEB (anónimo): no puedes identificarlo ni registrarlo por número. "
+            . "Atiéndelo con calidez y responde dudas generales (servicios, precios, zonas, días). "
+            . "Si quiere agendar a domicilio, dile con amabilidad que para eso necesita escribirte por WhatsApp, o usa escalar_a_humano para que una persona del negocio lo atienda.\n";
     } else {
-        // Desconocido: recabar datos y REGISTRARLO como "por aprobar" con la herramienta.
-        $t .= 'CLIENTE NO IDENTIFICADO: quien te escribe NO está en el directorio'
-            . ($esWeb ? ' (es el chat web, anónimo: no se puede identificar por número, así que NO puedes registrarlo; si quiere agendar, pídele que te escriba por WhatsApp o usa escalar_a_humano).' : ' (su número no está registrado).')
-            . " Por SEGURIDAD no puedes agendarle una visita a domicilio todavía.\n"
-            . "IMPORTANTE - NO lo lleves por el flujo normal de agendar. En su lugar:\n"
-            . "1) Puedes responder dudas generales (servicios, precios, en qué zonas y qué días atiende el negocio).\n"
-            . "2) En cuanto diga que quiere una cita, tu PRIMERA respuesta debe ser pedirle EN UN SOLO MENSAJE: su nombre completo, su colonia y su dirección (para registrarlo; su WhatsApp ya lo tienes). NO le preguntes qué servicio ni qué día/hora quiere: ese cuestionario es SOLO para clientes ya aprobados. A un cliente no registrado NO le corras el flujo de agendado; ve directo a pedir esos 3 datos.\n"
-            . "3) Cuando te dé esos datos, LLAMA a la herramienta registrar_cliente_domicilio (nombre, colonia, direccion). Solo entonces queda registrado. Después dile que su registro quedó en revisión y que en cuanto el negocio lo apruebe podrá agendar.\n"
-            . "PROHIBIDO: NUNCA le digas que 'está en proceso de aprobación', que 'ya está registrado' o que 'lo contactarán' ANTES de haber llamado con éxito a registrar_cliente_domicilio. Antes de esa llamada, este cliente NO existe en el sistema. Y NUNCA uses registrar_cita con un cliente no identificado.\n";
+        // Desconocido por WhatsApp: es un cliente NUEVO. Recabar datos y registrarlo por aprobar.
+        $t .= "CLIENTE NUEVO: quien te escribe NO está en tu directorio (primer contacto). Trátalo con MUCHA calidez y de forma proactiva.\n"
+            . "Como es a domicilio, todavía no puedes agendarle: primero hay que registrarlo. Por eso:\n"
+            . "- Puedes responder dudas generales (servicios, precios, en qué zonas y días atiende el negocio).\n"
+            . "- En cuanto quiera una cita, salúdalo con gusto y pídele EN UN SOLO MENSAJE su nombre completo, su colonia y su dirección (su WhatsApp ya lo tienes). Ejemplo de tono: \"¡Con mucho gusto te agendo! Como es tu primera vez con nosotros a domicilio, te registro rapidito. ¿Me compartes tu nombre completo, tu colonia y tu dirección?\". NO le preguntes servicio ni día/hora todavía (eso es solo para clientes ya aprobados).\n"
+            . "- Cuando te dé esos 3 datos, LLAMA a registrar_cliente_domicilio. Solo DESPUÉS dile con calidez que su registro quedó en revisión y que en cuanto lo aprueben podrá agendar.\n"
+            . "REGLA: NUNCA le digas \"ya tengo tu registro\", \"ya estás registrado\" ni \"estás en proceso de aprobación\" antes de haber llamado a registrar_cliente_domicilio: antes de esa llamada este cliente NO existe. Y nunca uses registrar_cita con él.\n";
     }
     $t .= "En todo momento: NUNCA reveles el nombre, la dirección ni datos de ningún otro cliente.\n";
     return $t;
