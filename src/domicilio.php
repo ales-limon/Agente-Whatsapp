@@ -303,8 +303,9 @@ function bloque_contexto_domicilio(int $idNegocio, array $c, string $contacto): 
             . " Por SEGURIDAD no puedes agendarle una visita a domicilio todavía.\n"
             . "IMPORTANTE - NO lo lleves por el flujo normal de agendar (NO le pidas servicio/día/hora como si fueras a registrar la cita). En su lugar:\n"
             . "1) Puedes responder dudas generales (servicios, precios, en qué zonas y qué días atiende el negocio).\n"
-            . "2) En cuanto quiera agendar, dile con calidez que para atenderlo a domicilio necesitas registrarlo primero, y pídele EN UN SOLO MENSAJE: nombre completo, colonia y dirección (su WhatsApp ya lo tienes).\n"
-            . "3) Cuando te dé esos datos, usa la herramienta registrar_cliente_domicilio. Eso lo deja registrado como 'por aprobar' y avisa al negocio. Dile que en cuanto el negocio lo apruebe podrá agendar por aquí. NUNCA uses registrar_cita con un cliente no identificado.\n";
+            . "2) En cuanto quiera agendar, dile con calidez que para atenderlo a domicilio primero necesitas registrarlo, y pídele EN UN SOLO MENSAJE: nombre completo, colonia y dirección (su WhatsApp ya lo tienes).\n"
+            . "3) Cuando te dé esos datos, LLAMA a la herramienta registrar_cliente_domicilio (nombre, colonia, direccion). Solo entonces queda registrado. Después dile que su registro quedó en revisión y que en cuanto el negocio lo apruebe podrá agendar.\n"
+            . "PROHIBIDO: NUNCA le digas que 'está en proceso de aprobación', que 'ya está registrado' o que 'lo contactarán' ANTES de haber llamado con éxito a registrar_cliente_domicilio. Antes de esa llamada, este cliente NO existe en el sistema. Y NUNCA uses registrar_cita con un cliente no identificado.\n";
     }
     $t .= "En todo momento: NUNCA reveles el nombre, la dirección ni datos de ningún otro cliente.\n";
     return $t;

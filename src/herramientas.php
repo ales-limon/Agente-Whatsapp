@@ -253,10 +253,13 @@ function registrar_cita(array $datos, ?string $contacto, int $idNegocio): string
     if (!empty($c['a_domicilio'])) {
         $cli = buscar_cliente_por_numero($idNegocio, (string)($contacto ?? ''));
         if (!$cli) {
-            return 'NO REGISTRADA: este cliente NO está en el directorio (servicio a domicilio). NO agendes a un desconocido: pídele nombre completo, colonia y dirección, y usa registrar_cliente_domicilio para dejarlo "por aprobar".';
+            return 'NO_REGISTRADO: no puedes agendar porque este cliente TODAVÍA NO EXISTE en el directorio. '
+                 . 'MUY IMPORTANTE: NO le digas que "está en proceso de aprobación" ni que "ya está registrado" (aún no lo está). '
+                 . 'Tu siguiente paso OBLIGATORIO: pídele su COLONIA y su DIRECCIÓN exacta (su nombre ya lo tienes) y, en cuanto te los dé, '
+                 . 'llama a la herramienta registrar_cliente_domicilio (nombre, colonia, direccion). Mientras no llames esa herramienta, el cliente NO queda registrado y NO existe.';
         }
         if ((int)($cli['aprobado'] ?? 1) !== 1) {
-            return 'NO REGISTRADA: este cliente está "por aprobar"; el negocio aún no lo aprueba, así que todavía no puede agendar. Dile con calidez que en cuanto lo aprueben podrá agendar por aquí.';
+            return 'NO REGISTRADA: este cliente ya existe pero está PENDIENTE de aprobación del negocio, así que todavía no puede agendar. Dile con calidez que en cuanto el negocio lo apruebe podrá agendar por aquí. NO vuelvas a registrarlo.';
         }
         $zdias   = dias_de_zona($idNegocio, (string)($cli['zona'] ?? ''));
         $diaCita = nombre_dia($fecha);
@@ -513,10 +516,11 @@ function consultar_disponibilidad(array $datos, ?string $contacto, int $idNegoci
     if (!empty($c['a_domicilio'])) {
         $cli = buscar_cliente_por_numero($idNegocio, (string)($contacto ?? ''));
         if (!$cli) {
-            return 'Este cliente NO está registrado para servicio a domicilio. NO le ofrezcas agenda: pídele nombre completo, colonia y dirección, y usa registrar_cliente_domicilio para dejarlo "por aprobar".';
+            return 'Este cliente TODAVÍA NO EXISTE en el directorio. NO le ofrezcas agenda y NO le digas que "está en proceso de aprobación". '
+                 . 'Pídele su colonia y su dirección, y llama a registrar_cliente_domicilio (nombre, colonia, direccion) para registrarlo.';
         }
         if ((int)($cli['aprobado'] ?? 1) !== 1) {
-            return 'Este cliente está "por aprobar"; aún no puede agendar. Dile que en cuanto el negocio lo apruebe podrá agendar por aquí.';
+            return 'Este cliente ya existe pero está PENDIENTE de aprobación; aún no puede agendar. Dile que en cuanto el negocio lo apruebe podrá agendar por aquí.';
         }
         $zdias = dias_de_zona($idNegocio, (string)($cli['zona'] ?? ''));
         if ($zdias && !in_array($dia, $zdias, true)) {
