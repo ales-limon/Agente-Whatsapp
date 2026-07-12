@@ -200,6 +200,40 @@ body.app { display: flex; min-height: 100vh; }
   .contenido--plano { height: auto; }
 }
 
+/* ---- Teléfono: ajustes finos para que todo se vea bien en pantallas angostas ---- */
+@media (max-width: 640px) {
+  /* Campos de formulario a ancho completo (anula anchos fijos en px) y apilados */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]),
+  select, textarea {
+    width: 100% !important; max-width: 100% !important; box-sizing: border-box; margin-right: 0;
+  }
+  .alta .fila { flex-direction: column; align-items: stretch; gap: 12px; }
+  .alta .campo-mini { width: 100%; }
+  .campo-fila { grid-template-columns: 1fr !important; }
+  .ficha-grid { grid-template-columns: 1fr !important; }
+
+  /* Tablas anchas: scroll horizontal propio en vez de desbordar la página */
+  .tabla, .tabla-cli, .tabla-pagos {
+    display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap;
+  }
+
+  /* Espaciado y títulos más compactos */
+  .contenido { padding: 16px 13px; }
+  .contenido__h1 { font-size: 21px; margin-bottom: 16px; }
+  h2.seccion-t { font-size: 16px; margin: 20px 0 12px; }
+  .panel, .tarjeta { padding: 14px 15px; }
+
+  /* Sidebar más compacto y nav como tira deslizable de una sola fila */
+  .sidebar__marca { padding: 12px 14px 8px; }
+  .sidebar__ctx { margin: 2px 12px 8px; }
+  .sidebar__nav { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 4px 8px 10px; }
+  .sidebar__nav::-webkit-scrollbar { display: none; }
+  .nav-item { flex: 0 0 auto; padding: 9px 13px; font-size: 13.5px; }
+
+  /* Botones más cómodos al tacto */
+  .btn { padding: 11px 16px; }
+}
+
 /* ============================================================
    Componentes de dashboard (reutilizables en todas las pantallas)
    ============================================================ */
