@@ -86,6 +86,14 @@ function responder_con_claude(string $systemPrompt, array $historial, string $me
             foreach ($content as $bloque) {
                 if (($bloque['type'] ?? '') === 'tool_use') {
                     $salida = ejecutar_herramienta($bloque['name'], $bloque['input'] ?? [], $contacto, $idNegocio);
+                    // Log de diagnostico: qué herramienta llamó el agente, con qué datos y qué respondió.
+                    @file_put_contents(
+                        __DIR__ . '/../storage/agente.log',
+                        date('Y-m-d H:i:s') . " | neg $idNegocio | " . ($contacto ?? '?') . " | " . $bloque['name']
+                        . ' ' . json_encode($bloque['input'] ?? [], JSON_UNESCAPED_UNICODE)
+                        . ' => ' . mb_substr(trim((string)$salida), 0, 220) . "\n",
+                        FILE_APPEND
+                    );
                     $resultados[] = [
                         'type'        => 'tool_result',
                         'tool_use_id' => $bloque['id'],
@@ -103,6 +111,11 @@ function responder_con_claude(string $systemPrompt, array $historial, string $me
             if (($bloque['type'] ?? '') === 'text') $texto .= $bloque['text'];
         }
         $texto = trim($texto);
+        @file_put_contents(
+            __DIR__ . '/../storage/agente.log',
+            date('Y-m-d H:i:s') . " | neg $idNegocio | " . ($contacto ?? '?') . " | RESPUESTA => " . mb_substr($texto, 0, 220) . "\n",
+            FILE_APPEND
+        );
         return $texto !== '' ? $texto : 'Disculpa, no entendi bien. Me puedes repetir tu mensaje?';
     }
 
